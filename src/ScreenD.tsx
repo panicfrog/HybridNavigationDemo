@@ -7,7 +7,14 @@ export default function ScreenD() {
     <View style={styles.container}>
       <Text style={styles.title}>RN Screen D</Text>
       <Text style={styles.subtitle}>终点页面（React Native）</Text>
-      <TouchableOpacity style={styles.button} onPress={pop}>
+      <TouchableOpacity style={styles.button} onPress={async () => {
+        try {
+          await pop();
+          console.log('[ScreenD] pop 完成');
+        } catch (e) {
+          console.error('[ScreenD] pop failed:', e);
+        }
+      }}>
         <Text style={styles.buttonText}>← Pop Back</Text>
       </TouchableOpacity>
     </View>

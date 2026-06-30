@@ -12,10 +12,15 @@
 
 RCT_EXTERN_METHOD(registerScreen:(NSString *)routePath
                   module:(NSString *)module
-              schemaJSON:(NSString *)schemaJSON)
+                  schemaJSON:(NSString *)schemaJSON)
+
 RCT_EXTERN_METHOD(pushRoute:(NSString *)routePath
                   module:(NSString *)module
-              paramsJSON:(NSString *)paramsJSON)
-RCT_EXTERN_METHOD(pop)
+                  paramsJSON:(NSString *)paramsJSON
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(pop:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
 
 @end

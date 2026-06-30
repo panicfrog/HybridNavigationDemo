@@ -13,12 +13,26 @@ export default function ScreenB({ params }: ScreenBProps) {
       <Text style={styles.subtitle}>React Native 页面</Text>
       <TouchableOpacity
         style={styles.button}
-        onPress={() => pushRoute('C', { message: 'Hi from B' })}>
+        onPress={async () => {
+          try {
+            await pushRoute('C', { message: 'Hi from B' });
+            console.log('[ScreenB] C push 完成');
+          } catch (e) {
+            console.error('[ScreenB] pushRoute C failed:', e);
+          }
+        }}>
         <Text style={styles.buttonText}>Push Native Screen C →</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.button, styles.badButton]}
-        onPress={() => pushRoute('C', { wrongField: 123 })}>
+        onPress={async () => {
+          try {
+            await pushRoute('C', { wrongField: 123 });
+            console.log('[ScreenB] bad params push 完成（不应该到这里）');
+          } catch (e) {
+            console.error('[ScreenB] bad params push 被拦截:', e);
+          }
+        }}>
         <Text style={styles.buttonText}>Push C with bad params (会被拦截)</Text>
       </TouchableOpacity>
     </View>

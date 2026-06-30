@@ -38,11 +38,11 @@ public protocol YYPRouterScreenProvider {
 }
 
 public final class YYPRouter {
-
+  
   public static let shared = YYPRouter()
-
+  
   // 字符串常量定义在 YYPRouterConstants.h/.m（Swift/ObjC 共用，避免 ObjC++ 反向依赖 Swift header）
-
+  
   private struct Registration {
     let routePath: String
     let module: String
@@ -51,25 +51,30 @@ public final class YYPRouter {
     /// IOS_NATIVE 用：接收 params JSON 字符串，返回 VC（throws 让 parse 错误冒泡）
     let createNativeViewController: ((String) throws -> UIViewController)?
   }
-
+  
   // weak wrapper（替代 NSMapTable）
   private final class Weak<T: AnyObject> {
     weak var value: T?
     init(_ value: T) { self.value = value }
   }
-
+  
   private var navControllers: [String: Weak<UINavigationController>] = [:]
   private var activeRoutePath: String?
   private var registrations: [String: Registration] = [:]
   private var eventObserver: NSObjectProtocol?
-
+  
   // 统一操作队列（按 routePath 分组，FIFO 顺序执行；push 和 pop 入同一队列，按入队顺序一个一个跑）
   private enum PendingOperation {
-    case push(UIViewController)
+    case push(UIViewController, completion: (() -> Void)?)
     case pop(UIViewController)
   }
   private var pendingQueue: [String: [PendingOperation]] = [:]
-
+  
+  /// RN push 的 completion 暂存：routePath → FIFO 队列
+  /// REACT_NATIVE 路径 pushRoute 入口只发通知，真正 push 在 onEvent → executePendingOperations 才发生
+  /// completion 暂存到这里，等 PendingOperation 入队时取出附上
+  private var pendingPushCompletions: [String: [() -> Void]] = [:]
+  
   private init() {
     eventObserver = NotificationCenter.default.addObserver(
       forName: NSNotification.Name(YYPRouterNotificationName),
@@ -79,15 +84,15 @@ public final class YYPRouter {
       self?.onEvent(notification)
     }
   }
-
+  
   deinit {
     if let obs = eventObserver {
       NotificationCenter.default.removeObserver(obs)
     }
   }
-
+  
   // MARK: - navController 注册表
-
+  
   public func registerNavigationController(_ nav: UINavigationController, forKey key: String) {
     guard !key.isEmpty else { return }
     navControllers[key] = Weak(nav)
@@ -95,30 +100,30 @@ public final class YYPRouter {
       activeRoutePath = key
     }
   }
-
+  
   public func unregisterNavigationController(forKey key: String) {
     navControllers.removeValue(forKey: key)
     if activeRoutePath == key {
       activeRoutePath = nil
     }
   }
-
+  
   public func navigationController(forKey key: String) -> UINavigationController? {
     guard !key.isEmpty else { return nil }
     return navControllers[key]?.value
   }
-
+  
   public var activeNavigationController: UINavigationController? {
     guard let key = activeRoutePath else { return nil }
     return navControllers[key]?.value
   }
-
+  
   public func setActiveNavigationControllerByKey(_ key: String) {
     activeRoutePath = key
   }
-
+  
   // MARK: - 页面注册表
-
+  
   /// 原生页面注册：泛型，从 Provider.Params.schema 自动拿 schema 和 parse
   public func registerScreen<Provider: YYPRouterScreenProvider>(
     _ routePath: String,
@@ -126,7 +131,7 @@ public final class YYPRouter {
     providerClass: Provider.Type
   ) {
     guard !routePath.isEmpty, !module.isEmpty else { return }
-
+    
     let schema = Provider.Params.schema.definition()
     let create: (String) throws -> UIViewController = { json in
       let parsed: Parsed<Provider.Params, ParseIssue>
@@ -140,7 +145,7 @@ public final class YYPRouter {
       }
       return Provider.router_createViewController(withParams: params)
     }
-
+    
     registrations["\(module)/\(routePath)"] = Registration(
       routePath: routePath,
       module: module,
@@ -148,7 +153,7 @@ public final class YYPRouter {
       schema: schema,
       createNativeViewController: create)
   }
-
+  
   /// RN 页面注册：从 JS 上来的 JSON Schema 字符串构建（throws：schema 构建可能失败）
   public func registerScreen(
     _ routePath: String,
@@ -157,7 +162,7 @@ public final class YYPRouter {
     schemaJSON: String?
   ) throws {
     guard !routePath.isEmpty, !module.isEmpty else { return }
-
+    
     let schema: Schema?
     if let jsonString = schemaJSON, !jsonString.isEmpty {
       do {
@@ -168,7 +173,7 @@ public final class YYPRouter {
     } else {
       schema = nil
     }
-
+    
     registrations["\(module)/\(routePath)"] = Registration(
       routePath: routePath,
       module: module,
@@ -176,42 +181,48 @@ public final class YYPRouter {
       schema: schema,
       createNativeViewController: nil)
   }
-
+  
   public func unregisterScreen(_ routePath: String, module: String) {
     registrations.removeValue(forKey: "\(module)/\(routePath)")
   }
-
+  
   // MARK: - 统一 push 入口
-
+  
   /// 字典版（兼容 JS Bridge / 旧调用方）
   public func pushRoute(
     _ routePath: String,
     module: String,
-    params: [String: Any]?
+    params: [String: Any]?,
+    animated: Bool = true,
+    completion: (() -> Void)? = nil
   ) throws {
     let paramsJSON = try toJSONString(fromDictionary: params)
-    try pushRouteInternal(routePath, module: module, paramsJSON: paramsJSON)
+    try pushRouteInternal(routePath, module: module, paramsJSON: paramsJSON, animated: animated, completion: completion)
   }
-
+  
   /// Encodable 版（原生强类型调用方，比如直接传 @Schemable struct + Encodable）
   public func pushRoute<E: Encodable>(
     _ routePath: String,
     module: String,
-    params: E
+    params: E,
+    animated: Bool = true,
+    completion: (() -> Void)? = nil
   ) throws {
     let paramsJSON = try toJSONString(fromEncodable: params)
-    try pushRouteInternal(routePath, module: module, paramsJSON: paramsJSON)
+    try pushRouteInternal(routePath, module: module, paramsJSON: paramsJSON, animated: animated, completion: completion)
   }
-
+  
   private func pushRouteInternal(
     _ routePath: String,
     module: String,
-    paramsJSON: String?
+    paramsJSON: String?,
+    animated: Bool,
+    completion: (() -> Void)?
   ) throws {
     guard let reg = registrations["\(module)/\(routePath)"] else {
       throw YYPRouterError.noRegistration(routePath: routePath, module: module)
     }
-
+    
     switch reg.platform {
     case .iosNative:
       guard let nav = activeNavigationController else {
@@ -220,9 +231,9 @@ public final class YYPRouter {
       guard let create = reg.createNativeViewController else {
         throw YYPRouterError.missingNativeFactory(routePath: routePath, module: module)
       }
-
+      
       let json = paramsJSON ?? "{}"
-
+      
       // Schema 验证（若有）
       if let schema = reg.schema {
         let result: ValidationResult
@@ -235,11 +246,14 @@ public final class YYPRouter {
           throw YYPRouterError.paramsValidationFailed(errors: result.errors ?? [])
         }
       }
-
+      
       // type-safe 创建（factory throws 让 parse 错误冒泡）
       let vc = try create(json)
-      nav.pushViewController(vc, animated: true)
-
+      nav.pushViewController(vc, animated: animated)
+      if let completion = completion {
+        invokeOnTransitionCompleted(nav: nav, completion: completion)
+      }
+      
     case .reactNative:
       var userInfo: [String: Any] = [
         YYPRouterEventTypeUserInfoKey: YYPRouterEventPushRoute,
@@ -253,9 +267,41 @@ public final class YYPRouter {
         name: NSNotification.Name(YYPRouterNotificationName),
         object: self,
         userInfo: userInfo)
+      // completion 暂存到 pendingPushCompletions，等 onEvent → executePendingOperations 真正 push 时再调
+      if let completion = completion {
+        pendingPushCompletions[routePath, default: []].append(completion)
+      }
     }
   }
-
+  
+  /// 统一 pop 入口
+  public func popRoute(animated: Bool = true, completion: (() -> Void)? = nil) throws {
+    guard let nav = activeNavigationController else {
+      throw YYPRouterError.noActiveNavigationController
+    }
+    guard nav.viewControllers.count > 1 else {
+      // 栈只剩 root，没东西可 pop，直接回调
+      completion?()
+      return
+    }
+    nav.popViewController(animated: animated)
+    if let completion = completion {
+      invokeOnTransitionCompleted(nav: nav, completion: completion)
+    }
+  }
+  
+  /// 用 transitionCoordinator 拿转场动画完成时机（UIKit 标准做法）
+  /// 无 coordinator（animated: false 等）→ fallback 到 DispatchQueue.main.async
+  private func invokeOnTransitionCompleted(nav: UINavigationController, completion: @escaping () -> Void) {
+    if let coordinator = nav.transitionCoordinator {
+      coordinator.animate(alongsideTransition: nil) { _ in
+        completion()  // 不管是否 cancelled，转场都"结束"了
+      }
+    } else {
+      DispatchQueue.main.async { completion() }
+    }
+  }
+  
   private func toJSONString(fromDictionary dict: [String: Any]?) throws -> String? {
     guard let dict = dict, !dict.isEmpty else { return nil }
     guard JSONSerialization.isValidJSONObject(dict) else {
@@ -271,7 +317,7 @@ public final class YYPRouter {
       throw YYPRouterError.paramsSerializationFailed(underlying: error)
     }
   }
-
+  
   private func toJSONString<E: Encodable>(fromEncodable value: E) throws -> String? {
     do {
       let data = try JSONEncoder().encode(value)
@@ -280,14 +326,14 @@ public final class YYPRouter {
       throw YYPRouterError.paramsSerializationFailed(underlying: error)
     }
   }
-
+  
   // MARK: - 通知分发（HybridContainer 事件）
-
+  
   private func onEvent(_ n: Notification) {
     let info = n.userInfo ?? [:]
     let type = info[YYPRouterEventTypeUserInfoKey] as? String ?? ""
     let routePath = info[YYPRouterRoutePathUserInfoKey] as? String ?? ""
-
+    
     if type == YYPRouterEventFabricTransactionDidMount {
       if !routePath.isEmpty {
         executePendingOperations(forRoutePath: routePath)
@@ -297,21 +343,27 @@ public final class YYPRouter {
     if type == YYPRouterEventPushRoute {
       return  // 由 YYPNavigationModule 转发到 JS
     }
-
+    
     guard let controller = info[YYPRouterControllerUserInfoKey] as? UIViewController,
           !routePath.isEmpty else {
       return
     }
-
+    
     // activityMode / isNativelyDismissed 由 HybridContainerView.mm 直接放进 userInfo
     //（避免 Swift 依赖 Fabric 类型）
     let activityMode = (info[YYPRouterActivityModeUserInfoKey] as? NSNumber)?.intValue ?? 0
     let isNativelyDismissed = (info[YYPRouterIsNativelyDismissedUserInfoKey] as? NSNumber)?.boolValue ?? false
     let isAttached = (activityMode == 1)
-
+    
     if type == YYPRouterEventScreenDidMount || type == YYPRouterEventScreenActivityModeDidChange {
       if isAttached {
-        pendingQueue[routePath, default: []].append(.push(controller))
+        // 取出该 routePath 最早的暂存 completion（FIFO）
+        var completion: (() -> Void)?
+        if var queue = pendingPushCompletions[routePath], !queue.isEmpty {
+          completion = queue.removeFirst()
+          pendingPushCompletions[routePath] = queue.isEmpty ? nil : queue
+        }
+        pendingQueue[routePath, default: []].append(.push(controller, completion: completion))
       }
     } else if type == YYPRouterEventScreenDidUnmount {
       if isAttached && !isNativelyDismissed {
@@ -319,20 +371,23 @@ public final class YYPRouter {
       }
     }
   }
-
+  
   private func executePendingOperations(forRoutePath routePath: String) {
     guard let nav = navigationController(forKey: routePath) else {
       debugPrint("[YYPRouter] WARNING: no navController for routePath=\(routePath), skip pending")
       pendingQueue.removeValue(forKey: routePath)
       return
     }
-
+    
     // FIFO：按入队顺序一个一个执行（push/pop 混合，不再先 pop 再 push）
     let operations = pendingQueue[routePath] ?? []
     for op in operations {
       switch op {
-      case .push(let controller):
+      case .push(let controller, let completion):
         nav.pushViewController(controller, animated: true)
+        if let completion = completion {
+          invokeOnTransitionCompleted(nav: nav, completion: completion)
+        }
       case .pop(let controller):
         if nav.topViewController === controller {
           nav.popViewController(animated: true)

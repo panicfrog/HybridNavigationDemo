@@ -59,34 +59,45 @@ public class YYPNavigationModule: RCTEventEmitter {
     }
   }
 
-  @objc(pushRoute:module:paramsJSON:)
+  @objc(pushRoute:module:paramsJSON:resolver:rejecter:)
   public func pushRoute(with routePath: String,
                       module: String,
-                      paramsJson: String) {
+                      paramsJson: String,
+                      resolver resolve: @escaping RCTPromiseResolveBlock,
+                      rejecter reject: @escaping RCTPromiseRejectBlock) {
     guard let jsonData = paramsJson.data(using: .utf8) else {
-      debugPrint("[YYPNavigationModule] pushRoute \(routePath): invalid UTF8 paramsJSON")
+      reject("invalid_utf8", "paramsJSON is not valid UTF8", nil)
       return
     }
     let params: [String: Any]?
     do {
       params = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
     } catch {
-      debugPrint("[YYPNavigationModule] pushRoute \(routePath): paramsJSON decode failed: \(error)")
+      reject("params_decode_failed", "Failed to decode paramsJSON: \(error.localizedDescription)", error)
       return
     }
     DispatchQueue.main.async {
       do {
-        try YYPRouter.shared.pushRoute(routePath, module: module, params: params)
+        try YYPRouter.shared.pushRoute(routePath, module: module, params: params) {
+          resolve(nil)
+        }
       } catch {
-        debugPrint("[YYPNavigationModule] pushRoute \(routePath) failed: \(error)")
+        reject("push_failed", error.localizedDescription, error)
       }
     }
   }
-  
-  @objc
-  public func pop() {
+
+  @objc(pop:rejecter:)
+  public func pop(resolver resolve: @escaping RCTPromiseResolveBlock,
+                rejecter reject: @escaping RCTPromiseRejectBlock) {
     DispatchQueue.main.async {
-      YYPRouter.shared.activeNavigationController?.popViewController(animated: true)
+      do {
+        try YYPRouter.shared.popRoute {
+          resolve(nil)
+        }
+      } catch {
+        reject("pop_failed", error.localizedDescription, error)
+      }
     }
   }
 }

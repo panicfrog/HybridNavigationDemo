@@ -15,20 +15,21 @@ export function registerScreen(routePath: string, def: ScreenDefinition, module:
   YYPNavigationModule.registerScreen(routePath, module, schemaJSON);
 }
 
-/// 主动 push 一个页面。params 会先用 zod schema 校验（早失败），通过后序列化为 JSON 发给原生。
-export function pushRoute(routePath: string, params?: any, module: string = 'default'): void {
+/// 主动 push 一个页面，等原生转场动画完成后 resolve。
+/// params 先用 zod schema 校验（不通过直接 throw，不发到原生）。
+export async function pushRoute(routePath: string, params?: any, module: string = 'default'): Promise<void> {
   const def = screens[routePath];
   if (def?.schema && params !== undefined) {
     const result = def.schema.safeParse(params);
     if (!result.success) {
-      console.error(`[HybridNav] Invalid params for ${routePath}:`, result.error.issues);
-      return;
+      throw new Error(`Invalid params for ${routePath}: ${JSON.stringify(result.error.issues)}`);
     }
   }
   const paramsJSON = params ? JSON.stringify(params) : '';
-  YYPNavigationModule.pushRoute(routePath, module, paramsJSON);
+  await YYPNavigationModule.pushRoute(routePath, module, paramsJSON);
 }
 
-export function pop(): void {
-  YYPNavigationModule.pop();
+/// pop 当前栈顶，等转场动画完成后 resolve。
+export async function pop(): Promise<void> {
+  await YYPNavigationModule.pop();
 }
