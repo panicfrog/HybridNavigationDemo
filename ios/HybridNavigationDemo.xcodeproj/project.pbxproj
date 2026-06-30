@@ -7,22 +7,50 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A0A0A0A0A0A0A0A0A0A0B02 /* YYPRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0B01 /* YYPRouter.swift */; };
+		0A0A0A0A0A0A0A0A0A0A0B04 /* NativeViewControllerC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0B03 /* NativeViewControllerC.swift */; };
+		0A0A0A0A0A0A0A0A0A0A0C03 /* YYPRouterConstants.m in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0C02 /* YYPRouterConstants.m */; };
 		0C80B921A6F3F58F76C31292 /* libPods-HybridNavigationDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-HybridNavigationDemo.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		27CDB0E82FF275EC0036BC09 /* YYPNavigationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27CDB0E72FF275EC0036BC09 /* YYPNavigationModule.swift */; };
+		27CDB0EF2FF28AAB0036BC09 /* YYPNavigationModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 27CDB0EE2FF28AAB0036BC09 /* YYPNavigationModule.m */; };
+		27CDB0F22FF33BF10036BC09 /* JSONSchema in Frameworks */ = {isa = PBXBuildFile; productRef = 27CDB0F12FF33BF10036BC09 /* JSONSchema */; };
+		27CDB0F42FF33BF10036BC09 /* JSONSchemaBuilder in Frameworks */ = {isa = PBXBuildFile; productRef = 27CDB0F32FF33BF10036BC09 /* JSONSchemaBuilder */; };
+		27CDB0F62FF33BF10036BC09 /* JSONSchemaConversion in Frameworks */ = {isa = PBXBuildFile; productRef = 27CDB0F52FF33BF10036BC09 /* JSONSchemaConversion */; };
+		27CDB0F82FF33BF10036BC09 /* OrderedJSON in Frameworks */ = {isa = PBXBuildFile; productRef = 27CDB0F72FF33BF10036BC09 /* OrderedJSON */; };
+		48E624815A8BBF1325FFC6B2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		556500A17C26FC3D1F3EE290 /* NativeViewControllerA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89AD9E1AE1A8C8B0498CA805 /* NativeViewControllerA.swift */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		80E4A705BB484DCCCEC89DFB /* HybridScreenComponentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = A15E3A00F29226E3F77CDE18 /* HybridScreenComponentView.mm */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		BB2F5F60FD89E4F15BCF9E2B /* HybridContainerView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2263DF412F76211D545506E7 /* HybridContainerView.mm */; };
+		E9453D68D4D4014E694A3B36 /* HybridScreenController.mm in Sources */ = {isa = PBXBuildFile; fileRef = D811CEA076E281C5FBD9BB6F /* HybridScreenController.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0A0A0A0A0A0A0A0A0A0A0B01 /* YYPRouter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YYPRouter.swift; sourceTree = "<group>"; };
+		0A0A0A0A0A0A0A0A0A0A0B03 /* NativeViewControllerC.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeViewControllerC.swift; sourceTree = "<group>"; };
+		0A0A0A0A0A0A0A0A0A0A0C01 /* YYPRouterConstants.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = YYPRouterConstants.h; sourceTree = "<group>"; };
+		0A0A0A0A0A0A0A0A0A0A0C02 /* YYPRouterConstants.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = YYPRouterConstants.m; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* HybridNavigationDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HybridNavigationDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = HybridNavigationDemo/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = HybridNavigationDemo/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = HybridNavigationDemo/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2263DF412F76211D545506E7 /* HybridContainerView.mm */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.objcpp; path = HybridContainerView.mm; sourceTree = "<group>"; };
+		27CDB0E72FF275EC0036BC09 /* YYPNavigationModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YYPNavigationModule.swift; sourceTree = "<group>"; };
+		27CDB0EE2FF28AAB0036BC09 /* YYPNavigationModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = YYPNavigationModule.m; sourceTree = "<group>"; };
+		2F456205FF375DD777D373B9 /* HybridScreenController.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = HybridScreenController.h; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-HybridNavigationDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HybridNavigationDemo.debug.xcconfig"; path = "Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-HybridNavigationDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HybridNavigationDemo.release.xcconfig"; path = "Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-HybridNavigationDemo.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-HybridNavigationDemo.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = HybridNavigationDemo/AppDelegate.swift; sourceTree = "<group>"; };
+		7AAB4CB7607FA4DE6AEB532F /* HybridContainerView.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = HybridContainerView.h; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = HybridNavigationDemo/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		89AD9E1AE1A8C8B0498CA805 /* NativeViewControllerA.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeViewControllerA.swift; sourceTree = "<group>"; };
+		A15E3A00F29226E3F77CDE18 /* HybridScreenComponentView.mm */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.objcpp; path = HybridScreenComponentView.mm; sourceTree = "<group>"; };
+		B55DDE6D1B6D6681A3D77BD5 /* HybridScreenComponentView.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = HybridScreenComponentView.h; sourceTree = "<group>"; };
+		D53757802E9CC623E85E6460 /* HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h"; sourceTree = "<group>"; };
+		D811CEA076E281C5FBD9BB6F /* HybridScreenController.mm */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.objcpp; path = HybridScreenController.mm; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -32,6 +60,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C80B921A6F3F58F76C31292 /* libPods-HybridNavigationDemo.a in Frameworks */,
+				27CDB0F62FF33BF10036BC09 /* JSONSchemaConversion in Frameworks */,
+				27CDB0F42FF33BF10036BC09 /* JSONSchemaBuilder in Frameworks */,
+				27CDB0F22FF33BF10036BC09 /* JSONSchema in Frameworks */,
+				27CDB0F82FF33BF10036BC09 /* OrderedJSON in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,8 +78,21 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				D53757802E9CC623E85E6460 /* HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h */,
+				354076E9B0478F4227AA9398 /* hybrid */,
+				164FB10A66650E2798E75651 /* native */,
 			);
 			name = HybridNavigationDemo;
+			sourceTree = "<group>";
+		};
+		164FB10A66650E2798E75651 /* native */ = {
+			isa = PBXGroup;
+			children = (
+				89AD9E1AE1A8C8B0498CA805 /* NativeViewControllerA.swift */,
+				0A0A0A0A0A0A0A0A0A0A0B03 /* NativeViewControllerC.swift */,
+			);
+			name = native;
+			path = HybridNavigationDemo/native;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
@@ -57,6 +102,25 @@
 				5DCACB8F33CDC322A6C60F78 /* libPods-HybridNavigationDemo.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		354076E9B0478F4227AA9398 /* hybrid */ = {
+			isa = PBXGroup;
+			children = (
+				7AAB4CB7607FA4DE6AEB532F /* HybridContainerView.h */,
+				2263DF412F76211D545506E7 /* HybridContainerView.mm */,
+				B55DDE6D1B6D6681A3D77BD5 /* HybridScreenComponentView.h */,
+				A15E3A00F29226E3F77CDE18 /* HybridScreenComponentView.mm */,
+				2F456205FF375DD777D373B9 /* HybridScreenController.h */,
+				D811CEA076E281C5FBD9BB6F /* HybridScreenController.mm */,
+				27CDB0E72FF275EC0036BC09 /* YYPNavigationModule.swift */,
+				27CDB0EE2FF28AAB0036BC09 /* YYPNavigationModule.m */,
+				0A0A0A0A0A0A0A0A0A0A0B01 /* YYPRouter.swift */,
+				0A0A0A0A0A0A0A0A0A0A0C01 /* YYPRouterConstants.h */,
+				0A0A0A0A0A0A0A0A0A0A0C02 /* YYPRouterConstants.m */,
+			);
+			name = hybrid;
+			path = HybridNavigationDemo/hybrid;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -143,6 +207,9 @@
 				Base,
 			);
 			mainGroup = 83CBB9F61A601CBA00E9B192;
+			packageReferences = (
+				27CDB0F02FF33BF10036BC09 /* XCRemoteSwiftPackageReference "swift-json-schema" */,
+			);
 			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -159,6 +226,7 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				48E624815A8BBF1325FFC6B2 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -189,9 +257,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -228,9 +300,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -244,7 +320,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27CDB0E82FF275EC0036BC09 /* YYPNavigationModule.swift in Sources */,
+				27CDB0EF2FF28AAB0036BC09 /* YYPNavigationModule.m in Sources */,
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				BB2F5F60FD89E4F15BCF9E2B /* HybridContainerView.mm in Sources */,
+				80E4A705BB484DCCCEC89DFB /* HybridScreenComponentView.mm in Sources */,
+				E9453D68D4D4014E694A3B36 /* HybridScreenController.mm in Sources */,
+				556500A17C26FC3D1F3EE290 /* NativeViewControllerA.swift in Sources */,
+				0A0A0A0A0A0A0A0A0A0A0B04 /* NativeViewControllerC.swift in Sources */,
+				0A0A0A0A0A0A0A0A0A0A0B02 /* YYPRouter.swift in Sources */,
+				0A0A0A0A0A0A0A0A0A0A0C03 /* YYPRouterConstants.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,7 +345,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = HybridNavigationDemo/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -274,6 +359,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = HybridNavigationDemo;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OBJC_BRIDGING_HEADER = "HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -289,7 +375,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = HybridNavigationDemo/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -303,6 +389,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = HybridNavigationDemo;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OBJC_BRIDGING_HEADER = "HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -358,7 +445,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -370,6 +457,10 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DFOLLY_NO_CONFIG",
@@ -377,8 +468,13 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
 				);
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				USE_HERMES = true;
 			};
 			name = Debug;
 		};
@@ -424,7 +520,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -435,6 +531,10 @@
 					"\"$(inherited)\"",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DFOLLY_NO_CONFIG",
@@ -442,8 +542,12 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
 				);
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -470,6 +574,40 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		27CDB0F02FF33BF10036BC09 /* XCRemoteSwiftPackageReference "swift-json-schema" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ajevans99/swift-json-schema";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		27CDB0F12FF33BF10036BC09 /* JSONSchema */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 27CDB0F02FF33BF10036BC09 /* XCRemoteSwiftPackageReference "swift-json-schema" */;
+			productName = JSONSchema;
+		};
+		27CDB0F32FF33BF10036BC09 /* JSONSchemaBuilder */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 27CDB0F02FF33BF10036BC09 /* XCRemoteSwiftPackageReference "swift-json-schema" */;
+			productName = JSONSchemaBuilder;
+		};
+		27CDB0F52FF33BF10036BC09 /* JSONSchemaConversion */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 27CDB0F02FF33BF10036BC09 /* XCRemoteSwiftPackageReference "swift-json-schema" */;
+			productName = JSONSchemaConversion;
+		};
+		27CDB0F72FF33BF10036BC09 /* OrderedJSON */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 27CDB0F02FF33BF10036BC09 /* XCRemoteSwiftPackageReference "swift-json-schema" */;
+			productName = OrderedJSON;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }
