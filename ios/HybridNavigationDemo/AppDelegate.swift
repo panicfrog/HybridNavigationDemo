@@ -26,9 +26,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     YYPRouter.shared.registerScreen("C", module: "default",
         providerClass: NativeViewControllerC.self)
 
-    // 3. 创建 A 作为 root（A 不走注册表）
+    // 3. 创建 A 作为 root（A 不走注册表，但需要注册 RouteEntry 让它出现在 currentRouteStack 中）
     let viewControllerA = NativeViewControllerA()
-    let navController = UINavigationController(rootViewController: viewControllerA)
+    YYPRouter.shared.registerRouteEntry(for: viewControllerA, routePath: "A", module: "default")
+    let navController = YYPRouterNavigationController(rootViewController: viewControllerA)
 
     // 4. 向 YYPRouter 注册 navController，并设为 active（JS 主动 push/pop 时使用）
     YYPRouter.shared.registerNavigationController(navController, forKey: "default")

@@ -29,6 +29,26 @@ public enum YYPRouterError: Error {
   case paramsParseThrew(underlying: Error)
 }
 
+/// 路由栈的单个节点。每次 push 创建一个实例（含唯一 UUID）。
+/// 通过 associated object 关联到对应的 UIViewController，currentRouteStack 派生自 nav.viewControllers。
+public struct RouteEntry: Equatable {
+  public let id: UUID
+  public let routePath: String
+  public let module: String
+  public let paramsJSON: String?
+  public weak var viewController: UIViewController?
+}
+
+private var routeEntryKey: UInt8 = 0
+
+extension UIViewController {
+  /// 关联到 VC 的 RouteEntry（YYPRouter.push 时分配，包含唯一 id）
+  public var yyprouter_routeEntry: RouteEntry? {
+    get { objc_getAssociatedObject(self, &routeEntryKey) as? RouteEntry }
+    set { objc_setAssociatedObject(self, &routeEntryKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
+  }
+}
+
 /// 原生页面 conform 这个 protocol。
 /// associatedtype Params 必须是 Schemable（通常用 @Schemable struct 自动生成），YYPRouter 用它的 schema 验证 + 解析 params。
 /// VC 的 router_createViewController 直接拿 strongly-typed Params 实例，不做手动字典操作。
@@ -38,11 +58,15 @@ public protocol YYPRouterScreenProvider {
 }
 
 public final class YYPRouter {
-  
+
   public static let shared = YYPRouter()
-  
+
+  /// 互斥锁（递归，允许同线程重入）：所有访问内部状态的方法通过它序列化，保证路由栈一致性（任意线程调用都安全）。
+  /// NSRecursiveLock 而非 NSLock，因为 public API 内部会调用 private helper（同样加锁），需要避免死锁。
+  private let lock = NSRecursiveLock()
+
   // 字符串常量定义在 YYPRouterConstants.h/.m（Swift/ObjC 共用，避免 ObjC++ 反向依赖 Swift header）
-  
+
   private struct Registration {
     let routePath: String
     let module: String
@@ -51,30 +75,41 @@ public final class YYPRouter {
     /// IOS_NATIVE 用：接收 params JSON 字符串，返回 VC（throws 让 parse 错误冒泡）
     let createNativeViewController: ((String) throws -> UIViewController)?
   }
-  
+
   // weak wrapper（替代 NSMapTable）
   private final class Weak<T: AnyObject> {
     weak var value: T?
     init(_ value: T) { self.value = value }
   }
-  
+
   private var navControllers: [String: Weak<UINavigationController>] = [:]
   private var activeRoutePath: String?
   private var registrations: [String: Registration] = [:]
   private var eventObserver: NSObjectProtocol?
-  
-  // 统一操作队列（按 routePath 分组，FIFO 顺序执行；push 和 pop 入同一队列，按入队顺序一个一个跑）
+
+  // 统一操作队列（按 routePath 分组，FIFO 顺序执行；push 和 pop 入同一队列）
   private enum PendingOperation {
     case push(UIViewController, completion: (() -> Void)?)
-    case pop(UIViewController)
+    case pop(UIViewController, completion: (() -> Void)?)
   }
   private var pendingQueue: [String: [PendingOperation]] = [:]
-  
-  /// RN push 的 completion 暂存：routePath → FIFO 队列
+
+  /// RN push 的上下文暂存：HybridContainer routePath（"default"）→ FIFO 队列
   /// REACT_NATIVE 路径 pushRoute 入口只发通知，真正 push 在 onEvent → executePendingOperations 才发生
-  /// completion 暂存到这里，等 PendingOperation 入队时取出附上
-  private var pendingPushCompletions: [String: [() -> Void]] = [:]
-  
+  /// 这里把 routePath/module/params/completion 一起暂存，等 onEvent ScreenDidMount 入队时取出 + 给 controller 关联 RouteEntry
+  private struct PendingPushContext {
+    let routePath: String       // 业务 routePath（B/C/D）
+    let module: String
+    let paramsJSON: String?
+    let completion: (() -> Void)?
+  }
+  private var pendingPushContexts: [String: [PendingPushContext]] = [:]
+
+  /// 当前已激活的 RouteEntry.id 集合。push 时加入；nav 转场完成（didShow）后用 nav.viewControllers 反向同步。
+  /// 主要用于 onEvent ScreenDidUnmount 去重判断（如果 id 已不在 activeRouteIDs，说明已经被 pop，
+  /// 后续 Fabric unmount 触发的 ScreenDidUnmount 是 pop 的副作用，不重复处理）。
+  private var activeRouteIDs: Set<UUID> = []
+
   private init() {
     eventObserver = NotificationCenter.default.addObserver(
       forName: NSNotification.Name(YYPRouterNotificationName),
@@ -84,54 +119,106 @@ public final class YYPRouter {
       self?.onEvent(notification)
     }
   }
-  
+
   deinit {
     if let obs = eventObserver {
       NotificationCenter.default.removeObserver(obs)
     }
   }
-  
+
   // MARK: - navController 注册表
-  
+
   public func registerNavigationController(_ nav: UINavigationController, forKey key: String) {
+    lock.lock(); defer { lock.unlock() }
     guard !key.isEmpty else { return }
     navControllers[key] = Weak(nav)
     if activeRoutePath == nil {
       activeRoutePath = key
     }
   }
-  
+
   public func unregisterNavigationController(forKey key: String) {
+    lock.lock(); defer { lock.unlock() }
     navControllers.removeValue(forKey: key)
     if activeRoutePath == key {
       activeRoutePath = nil
     }
   }
-  
+
   public func navigationController(forKey key: String) -> UINavigationController? {
+    lock.lock(); defer { lock.unlock() }
     guard !key.isEmpty else { return nil }
     return navControllers[key]?.value
   }
-  
+
   public var activeNavigationController: UINavigationController? {
+    lock.lock(); defer { lock.unlock() }
     guard let key = activeRoutePath else { return nil }
     return navControllers[key]?.value
   }
-  
+
   public func setActiveNavigationControllerByKey(_ key: String) {
+    lock.lock(); defer { lock.unlock() }
     activeRoutePath = key
   }
-  
+
+  // MARK: - 路由栈（派生）
+
+  /// 当前路由栈，派生自 active nav 的 viewControllers（每个 VC 通过 associated object 拿 RouteEntry）
+  public var currentRouteStack: [RouteEntry] {
+    lock.lock(); defer { lock.unlock() }
+    guard let nav = activeNavigationController else { return [] }
+    return nav.viewControllers.compactMap { $0.yyprouter_routeEntry }
+  }
+
+  /// 给 root VC 注册 RouteEntry（root 不经过 pushRoute，但需要出现在 currentRouteStack 中）
+  @discardableResult
+  public func registerRouteEntry(
+    for viewController: UIViewController,
+    routePath: String,
+    module: String,
+    paramsJSON: String? = nil
+  ) -> RouteEntry {
+    lock.lock(); defer { lock.unlock() }
+    let entry = RouteEntry(id: UUID(), routePath: routePath, module: module, paramsJSON: paramsJSON, viewController: viewController)
+    viewController.yyprouter_routeEntry = entry
+    activeRouteIDs.insert(entry.id)
+    debugPrint("[YYPRouter] registerRouteEntry routePath=\(routePath) id=\(entry.id)")
+    return entry
+  }
+
+  /// nav 转场完成（push/pop/back button/侧滑 都会触发）后由 YYPRouterNavigationController 调用，
+  /// 用当前 nav.viewControllers 反向同步 activeRouteIDs（被 pop 的 VC id 自动移除）
+  public func syncStackAfterTransition(_ currentVCs: [UIViewController]) {
+    lock.lock(); defer { lock.unlock() }
+    let currentIDs = Set(currentVCs.compactMap { $0.yyprouter_routeEntry?.id })
+    let removed = activeRouteIDs.subtracting(currentIDs)
+    if !removed.isEmpty {
+      debugPrint("[YYPRouter] syncStackAfterTransition removed \(removed.count) id(s) (被 pop)")
+    }
+    activeRouteIDs = activeRouteIDs.intersection(currentIDs)
+  }
+
+  /// pending / 转场中（用于拦截系统 back button / 侧滑）
+  public var hasPendingOperations: Bool {
+    lock.lock(); defer { lock.unlock() }
+    if pendingQueue.values.contains(where: { !$0.isEmpty }) { return true }
+    if pendingPushContexts.values.contains(where: { !$0.isEmpty }) { return true }
+    if let nav = activeNavigationController, nav.transitionCoordinator != nil { return true }
+    return false
+  }
+
   // MARK: - 页面注册表
-  
+
   /// 原生页面注册：泛型，从 Provider.Params.schema 自动拿 schema 和 parse
   public func registerScreen<Provider: YYPRouterScreenProvider>(
     _ routePath: String,
     module: String,
     providerClass: Provider.Type
   ) {
+    lock.lock(); defer { lock.unlock() }
     guard !routePath.isEmpty, !module.isEmpty else { return }
-    
+
     let schema = Provider.Params.schema.definition()
     let create: (String) throws -> UIViewController = { json in
       let parsed: Parsed<Provider.Params, ParseIssue>
@@ -145,7 +232,7 @@ public final class YYPRouter {
       }
       return Provider.router_createViewController(withParams: params)
     }
-    
+
     registrations["\(module)/\(routePath)"] = Registration(
       routePath: routePath,
       module: module,
@@ -153,7 +240,7 @@ public final class YYPRouter {
       schema: schema,
       createNativeViewController: create)
   }
-  
+
   /// RN 页面注册：从 JS 上来的 JSON Schema 字符串构建（throws：schema 构建可能失败）
   public func registerScreen(
     _ routePath: String,
@@ -161,8 +248,9 @@ public final class YYPRouter {
     platform: YYPRouterPlatform = .reactNative,
     schemaJSON: String?
   ) throws {
+    lock.lock(); defer { lock.unlock() }
     guard !routePath.isEmpty, !module.isEmpty else { return }
-    
+
     let schema: Schema?
     if let jsonString = schemaJSON, !jsonString.isEmpty {
       do {
@@ -173,7 +261,7 @@ public final class YYPRouter {
     } else {
       schema = nil
     }
-    
+
     registrations["\(module)/\(routePath)"] = Registration(
       routePath: routePath,
       module: module,
@@ -181,13 +269,14 @@ public final class YYPRouter {
       schema: schema,
       createNativeViewController: nil)
   }
-  
+
   public func unregisterScreen(_ routePath: String, module: String) {
+    lock.lock(); defer { lock.unlock() }
     registrations.removeValue(forKey: "\(module)/\(routePath)")
   }
-  
+
   // MARK: - 统一 push 入口
-  
+
   /// 字典版（兼容 JS Bridge / 旧调用方）
   public func pushRoute(
     _ routePath: String,
@@ -196,10 +285,11 @@ public final class YYPRouter {
     animated: Bool = true,
     completion: (() -> Void)? = nil
   ) throws {
+    lock.lock(); defer { lock.unlock() }
     let paramsJSON = try toJSONString(fromDictionary: params)
     try pushRouteInternal(routePath, module: module, paramsJSON: paramsJSON, animated: animated, completion: completion)
   }
-  
+
   /// Encodable 版（原生强类型调用方，比如直接传 @Schemable struct + Encodable）
   public func pushRoute<E: Encodable>(
     _ routePath: String,
@@ -208,10 +298,11 @@ public final class YYPRouter {
     animated: Bool = true,
     completion: (() -> Void)? = nil
   ) throws {
+    lock.lock(); defer { lock.unlock() }
     let paramsJSON = try toJSONString(fromEncodable: params)
     try pushRouteInternal(routePath, module: module, paramsJSON: paramsJSON, animated: animated, completion: completion)
   }
-  
+
   private func pushRouteInternal(
     _ routePath: String,
     module: String,
@@ -222,7 +313,7 @@ public final class YYPRouter {
     guard let reg = registrations["\(module)/\(routePath)"] else {
       throw YYPRouterError.noRegistration(routePath: routePath, module: module)
     }
-    
+
     switch reg.platform {
     case .iosNative:
       guard let nav = activeNavigationController else {
@@ -231,9 +322,9 @@ public final class YYPRouter {
       guard let create = reg.createNativeViewController else {
         throw YYPRouterError.missingNativeFactory(routePath: routePath, module: module)
       }
-      
+
       let json = paramsJSON ?? "{}"
-      
+
       // Schema 验证（若有）
       if let schema = reg.schema {
         let result: ValidationResult
@@ -246,14 +337,19 @@ public final class YYPRouter {
           throw YYPRouterError.paramsValidationFailed(errors: result.errors ?? [])
         }
       }
-      
-      // type-safe 创建（factory throws 让 parse 错误冒泡）
+
+      // type-safe 创建 + 关联 RouteEntry
       let vc = try create(json)
+      let entry = RouteEntry(id: UUID(), routePath: routePath, module: module, paramsJSON: json, viewController: vc)
+      vc.yyprouter_routeEntry = entry
+      activeRouteIDs.insert(entry.id)
+      debugPrint("[YYPRouter] push (IOS_NATIVE) routePath=\(routePath) id=\(entry.id) → stack=\(currentRouteStack.map { $0.routePath })")
+
       nav.pushViewController(vc, animated: animated)
       if let completion = completion {
         invokeOnTransitionCompleted(nav: nav, completion: completion)
       }
-      
+
     case .reactNative:
       var userInfo: [String: Any] = [
         YYPRouterEventTypeUserInfoKey: YYPRouterEventPushRoute,
@@ -263,45 +359,70 @@ public final class YYPRouter {
       if let json = paramsJSON {
         userInfo[YYPRouterParamsUserInfoKey] = json
       }
+      debugPrint("[YYPRouter] push (REACT_NATIVE) routePath=\(routePath) → 发 pushRoute 通知给 JS（真正 push 等 Fabric commit）")
       NotificationCenter.default.post(
         name: NSNotification.Name(YYPRouterNotificationName),
         object: self,
         userInfo: userInfo)
-      // completion 暂存到 pendingPushCompletions，等 onEvent → executePendingOperations 真正 push 时再调
-      if let completion = completion {
-        pendingPushCompletions[routePath, default: []].append(completion)
-      }
+      // context 暂存到 pendingPushContexts（按 HybridContainer routePath 分组 FIFO），等 onEvent → executePendingOperations 真正 push 时取出
+      let navKey = activeRoutePath ?? routePath
+      pendingPushContexts[navKey, default: []].append(
+        PendingPushContext(routePath: routePath, module: module, paramsJSON: paramsJSON, completion: completion))
     }
   }
-  
-  /// 统一 pop 入口
+
+  // MARK: - 统一 pop 入口（始终入队）
+
   public func popRoute(animated: Bool = true, completion: (() -> Void)? = nil) throws {
+    lock.lock(); defer { lock.unlock() }
     guard let nav = activeNavigationController else {
       throw YYPRouterError.noActiveNavigationController
     }
     guard nav.viewControllers.count > 1 else {
-      // 栈只剩 root，没东西可 pop，直接回调
       completion?()
       return
     }
-    nav.popViewController(animated: animated)
-    if let completion = completion {
-      invokeOnTransitionCompleted(nav: nav, completion: completion)
+    guard let routePath = activeRoutePath else {
+      throw YYPRouterError.noActiveNavigationController
+    }
+
+    // 始终入队（统一管理 push/pop 顺序）
+    let topVC = nav.viewControllers.last!
+    let topRoutePath = topVC.yyprouter_routeEntry?.routePath ?? "?"
+    let topID = topVC.yyprouter_routeEntry?.id ?? UUID()
+    debugPrint("[YYPRouter] popRoute enqueued routePath=\(topRoutePath) id=\(topID)")
+    pendingQueue[routePath, default: []].append(.pop(topVC, completion: completion))
+
+    // 队列空闲则立即执行（不等 FabricTransactionDidMount）
+    if nav.transitionCoordinator == nil {
+      executePendingOperations(forRoutePath: routePath)
     }
   }
-  
+
   /// 用 transitionCoordinator 拿转场动画完成时机（UIKit 标准做法）
   /// 无 coordinator（animated: false 等）→ fallback 到 DispatchQueue.main.async
+  /// 完成后链式触发 executePendingOperations（保证队列连续执行）
+  /// 注意：transitionCoordinator 的 completion 异步执行，调用方加锁在 invokeOnTransitionCompleted 返回时已经释放；
+  /// completion 里调 executePendingOperations（自己加锁）重新持锁。
   private func invokeOnTransitionCompleted(nav: UINavigationController, completion: @escaping () -> Void) {
+    let chainNext: () -> Void = { [weak self] in
+      if let routePath = self?.activeRoutePath {
+        self?.executePendingOperations(forRoutePath: routePath)
+      }
+    }
     if let coordinator = nav.transitionCoordinator {
       coordinator.animate(alongsideTransition: nil) { _ in
-        completion()  // 不管是否 cancelled，转场都"结束"了
+        completion()
+        chainNext()
       }
     } else {
-      DispatchQueue.main.async { completion() }
+      DispatchQueue.main.async {
+        completion()
+        chainNext()
+      }
     }
   }
-  
+
   private func toJSONString(fromDictionary dict: [String: Any]?) throws -> String? {
     guard let dict = dict, !dict.isEmpty else { return nil }
     guard JSONSerialization.isValidJSONObject(dict) else {
@@ -317,7 +438,7 @@ public final class YYPRouter {
       throw YYPRouterError.paramsSerializationFailed(underlying: error)
     }
   }
-  
+
   private func toJSONString<E: Encodable>(fromEncodable value: E) throws -> String? {
     do {
       let data = try JSONEncoder().encode(value)
@@ -326,14 +447,15 @@ public final class YYPRouter {
       throw YYPRouterError.paramsSerializationFailed(underlying: error)
     }
   }
-  
+
   // MARK: - 通知分发（HybridContainer 事件）
-  
+
   private func onEvent(_ n: Notification) {
+    lock.lock(); defer { lock.unlock() }
     let info = n.userInfo ?? [:]
     let type = info[YYPRouterEventTypeUserInfoKey] as? String ?? ""
     let routePath = info[YYPRouterRoutePathUserInfoKey] as? String ?? ""
-    
+
     if type == YYPRouterEventFabricTransactionDidMount {
       if !routePath.isEmpty {
         executePendingOperations(forRoutePath: routePath)
@@ -343,54 +465,85 @@ public final class YYPRouter {
     if type == YYPRouterEventPushRoute {
       return  // 由 YYPNavigationModule 转发到 JS
     }
-    
+
     guard let controller = info[YYPRouterControllerUserInfoKey] as? UIViewController,
           !routePath.isEmpty else {
       return
     }
-    
-    // activityMode / isNativelyDismissed 由 HybridContainerView.mm 直接放进 userInfo
-    //（避免 Swift 依赖 Fabric 类型）
+
+    // activityMode 由 HybridContainerView.mm 直接放进 userInfo（避免 Swift 依赖 Fabric 类型）
     let activityMode = (info[YYPRouterActivityModeUserInfoKey] as? NSNumber)?.intValue ?? 0
-    let isNativelyDismissed = (info[YYPRouterIsNativelyDismissedUserInfoKey] as? NSNumber)?.boolValue ?? false
     let isAttached = (activityMode == 1)
-    
+
     if type == YYPRouterEventScreenDidMount || type == YYPRouterEventScreenActivityModeDidChange {
       if isAttached {
-        // 取出该 routePath 最早的暂存 completion（FIFO）
-        var completion: (() -> Void)?
-        if var queue = pendingPushCompletions[routePath], !queue.isEmpty {
-          completion = queue.removeFirst()
-          pendingPushCompletions[routePath] = queue.isEmpty ? nil : queue
+        // 取出该 HybridContainer routePath 最早的暂存 context（FIFO），从中拿到业务 routePath / module / params / completion
+        // 注意：事件里的 routePath 是 HybridContainer 的 routePath（"default"），不是业务 routePath（B/C/D）
+        let navKey = routePath  // HybridContainer routePath
+        var ctx: PendingPushContext?
+        if var queue = pendingPushContexts[navKey], !queue.isEmpty {
+          ctx = queue.removeFirst()
+          pendingPushContexts[navKey] = queue.isEmpty ? nil : queue
         }
-        pendingQueue[routePath, default: []].append(.push(controller, completion: completion))
+
+        // 创建 RouteEntry（业务 routePath 来自 ctx）并关联到 controller
+        let businessRoutePath = ctx?.routePath ?? "(unknown)"
+        let module = ctx?.module ?? "(unknown)"
+        let paramsJSON = ctx?.paramsJSON
+        let entry = RouteEntry(id: UUID(), routePath: businessRoutePath, module: module, paramsJSON: paramsJSON, viewController: controller)
+        controller.yyprouter_routeEntry = entry
+        activeRouteIDs.insert(entry.id)
+        debugPrint("[YYPRouter] ScreenDidMount → 关联 RouteEntry routePath=\(businessRoutePath) id=\(entry.id)")
+
+        pendingQueue[navKey, default: []].append(.push(controller, completion: ctx?.completion))
       }
     } else if type == YYPRouterEventScreenDidUnmount {
-      if isAttached && !isNativelyDismissed {
-        pendingQueue[routePath, default: []].append(.pop(controller))
+      // 用 RouteEntry.id 去重：如果 id 已不在 activeRouteIDs（说明已被 nav pop，syncStackAfterTransition 移除过），
+      // 则这是 pop 的副作用 Fabric unmount 通知，忽略不处理
+      let routePathOfController = controller.yyprouter_routeEntry?.routePath ?? "?"
+      let idOfController = controller.yyprouter_routeEntry?.id
+      if let id = idOfController, !activeRouteIDs.contains(id) {
+        debugPrint("[YYPRouter] ScreenDidUnmount routePath=\(routePathOfController) id=\(id) 命中去重（已 pop），忽略")
+        return
       }
+      // 否则 activeRouteIDs 仍含该 id（说明 onEvent 比同步先到），手动移除避免后续重复
+      if let id = idOfController {
+        activeRouteIDs.remove(id)
+        debugPrint("[YYPRouter] ScreenDidUnmount routePath=\(routePathOfController) id=\(id) 正常处理（activeRouteIDs 移除）")
+      }
+      // 不再加 PendingOperation.pop（系统 pop 由 UIKit 完成或 YYPRouter.popRoute 入队处理）
     }
   }
-  
+
   private func executePendingOperations(forRoutePath routePath: String) {
+    lock.lock(); defer { lock.unlock() }
     guard let nav = navigationController(forKey: routePath) else {
       debugPrint("[YYPRouter] WARNING: no navController for routePath=\(routePath), skip pending")
       pendingQueue.removeValue(forKey: routePath)
       return
     }
-    
-    // FIFO：按入队顺序一个一个执行（push/pop 混合，不再先 pop 再 push）
+
+    // FIFO：按入队顺序一个一个执行（push/pop 混合，统一顺序）
     let operations = pendingQueue[routePath] ?? []
     for op in operations {
       switch op {
       case .push(let controller, let completion):
+        let rp = controller.yyprouter_routeEntry?.routePath ?? "?"
+        let id = controller.yyprouter_routeEntry?.id ?? UUID()
+        debugPrint("[YYPRouter] executePendingOperations push routePath=\(rp) id=\(id) → stack=\(currentRouteStack.map { $0.routePath })")
         nav.pushViewController(controller, animated: true)
         if let completion = completion {
           invokeOnTransitionCompleted(nav: nav, completion: completion)
         }
-      case .pop(let controller):
+      case .pop(let controller, let completion):
         if nav.topViewController === controller {
+          let rp = controller.yyprouter_routeEntry?.routePath ?? "?"
+          let id = controller.yyprouter_routeEntry?.id ?? UUID()
+          debugPrint("[YYPRouter] executePendingOperations pop routePath=\(rp) id=\(id)")
           nav.popViewController(animated: true)
+          if let completion = completion {
+            invokeOnTransitionCompleted(nav: nav, completion: completion)
+          }
         }
       }
     }

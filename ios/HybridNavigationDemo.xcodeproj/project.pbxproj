@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0A0A0A0A0A0A0A0A0A0A0B02 /* YYPRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0B01 /* YYPRouter.swift */; };
+		0A0A0A0A0A0A0A0A0A0A0D02 /* YYPRouterNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0D01 /* YYPRouterNavigationController.swift */; };
 		0A0A0A0A0A0A0A0A0A0A0B04 /* NativeViewControllerC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0B03 /* NativeViewControllerC.swift */; };
 		0A0A0A0A0A0A0A0A0A0A0C03 /* YYPRouterConstants.m in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0C02 /* YYPRouterConstants.m */; };
 		0C80B921A6F3F58F76C31292 /* libPods-HybridNavigationDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-HybridNavigationDemo.a */; };
@@ -29,6 +30,7 @@
 
 /* Begin PBXFileReference section */
 		0A0A0A0A0A0A0A0A0A0A0B01 /* YYPRouter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YYPRouter.swift; sourceTree = "<group>"; };
+		0A0A0A0A0A0A0A0A0A0A0D01 /* YYPRouterNavigationController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YYPRouterNavigationController.swift; sourceTree = "<group>"; };
 		0A0A0A0A0A0A0A0A0A0A0B03 /* NativeViewControllerC.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeViewControllerC.swift; sourceTree = "<group>"; };
 		0A0A0A0A0A0A0A0A0A0A0C01 /* YYPRouterConstants.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = YYPRouterConstants.h; sourceTree = "<group>"; };
 		0A0A0A0A0A0A0A0A0A0A0C02 /* YYPRouterConstants.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = YYPRouterConstants.m; sourceTree = "<group>"; };
@@ -116,6 +118,7 @@
 				27CDB0E72FF275EC0036BC09 /* YYPNavigationModule.swift */,
 				27CDB0EE2FF28AAB0036BC09 /* YYPNavigationModule.m */,
 				0A0A0A0A0A0A0A0A0A0A0B01 /* YYPRouter.swift */,
+				0A0A0A0A0A0A0A0A0A0A0D01 /* YYPRouterNavigationController.swift */,
 				0A0A0A0A0A0A0A0A0A0A0C01 /* YYPRouterConstants.h */,
 				0A0A0A0A0A0A0A0A0A0A0C02 /* YYPRouterConstants.m */,
 			);
@@ -329,6 +332,7 @@
 				556500A17C26FC3D1F3EE290 /* NativeViewControllerA.swift in Sources */,
 				0A0A0A0A0A0A0A0A0A0A0B04 /* NativeViewControllerC.swift in Sources */,
 				0A0A0A0A0A0A0A0A0A0A0B02 /* YYPRouter.swift in Sources */,
+				0A0A0A0A0A0A0A0A0A0A0D02 /* YYPRouterNavigationController.swift in Sources */,
 				0A0A0A0A0A0A0A0A0A0A0C03 /* YYPRouterConstants.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
