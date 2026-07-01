@@ -7,18 +7,11 @@ NS_ASSUME_NONNULL_BEGIN
 @class HybridScreenController;
 @class HybridContainerView;
 
-typedef NS_ENUM(int, HybridScreenActivityMode) {
-  HybridScreenActivityModeDetached = 0,
-  HybridScreenActivityModeAttached = 1,
-};
-
 @interface HybridScreenComponentView : RCTViewComponentView
 
 @property (nonatomic, weak, nullable) HybridContainerView *container;
 @property (nonatomic, strong, readonly) HybridScreenController *controller;
-@property (nonatomic, strong, readonly, nullable) NSString *screenKey;
-@property (nonatomic, readonly) HybridScreenActivityMode activityMode;
-@property (nonatomic) BOOL isNativelyDismissed;
+@property (nonatomic, copy, nullable) NSString *routeID;
 
 - (void)emitWillAppear;
 - (void)emitDidAppear;

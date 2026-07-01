@@ -10,11 +10,6 @@ NS_ASSUME_NONNULL_BEGIN
 /// 通知出去（发送方），路由执行由 YYPRouter 完成。
 @interface HybridContainerView : RCTViewComponentView
 
-@property (nonatomic, copy, nullable) NSString *routePath;
-
-/// HybridScreenComponentView 通过此方法通知 activityMode 变化
-- (void)screenChangedActivityMode:(nonnull HybridScreenComponentView *)screen;
-
 @end
 
 NS_ASSUME_NONNULL_END

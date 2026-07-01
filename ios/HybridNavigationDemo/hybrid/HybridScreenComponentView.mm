@@ -12,27 +12,16 @@
 namespace react = facebook::react;
 
 @implementation HybridScreenComponentView {
-  BOOL _hasUpdatedActivityMode;
   RCTSurfaceTouchHandler *_touchHandler;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
   if (self = [super initWithFrame:frame]) {
-    [self initState];
+    _routeID = nil;
+    _controller = [[HybridScreenController alloc] initWithComponentView:self];
   }
   return self;
-}
-
-- (void)initState
-{
-  _activityMode = HybridScreenActivityModeDetached;
-  _hasUpdatedActivityMode = NO;
-  _isNativelyDismissed = NO;
-  _screenKey = nil;
-
-  // 创建 UIViewController，将自身（UIView）作为其根视图
-  _controller = [[HybridScreenController alloc] initWithComponentView:self];
 }
 
 - (BOOL)isMountedUnderReactRoot
@@ -48,7 +37,6 @@ namespace react = facebook::react;
 - (void)didMoveToWindow
 {
   [super didMoveToWindow];
-  // 只有脱离 RN surface 树（被 push 到外部 navController）后才需要独立的 touch handler
   if (self.window != nil && ![self isMountedUnderReactRoot]) {
     if (_touchHandler == nil) {
       _touchHandler = [RCTSurfaceTouchHandler new];
@@ -67,26 +55,11 @@ namespace react = facebook::react;
   const auto &newP = *std::static_pointer_cast<const react::HybridScreenProps>(props);
   const auto &oldP = *std::static_pointer_cast<const react::HybridScreenProps>(_props);
 
-  if (oldP.activityMode != newP.activityMode) {
-    _activityMode = (HybridScreenActivityMode)newP.activityMode;
-    _hasUpdatedActivityMode = YES;
-  }
-
-  if (oldP.screenKey != newP.screenKey) {
-    _screenKey = RCTNSStringFromStringNilIfEmpty(newP.screenKey);
+  if (oldP.routeID != newP.routeID) {
+    _routeID = RCTNSStringFromStringNilIfEmpty(newP.routeID);
   }
 
   [super updateProps:props oldProps:oldProps];
-}
-
-- (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask
-{
-  if (_hasUpdatedActivityMode) {
-    _hasUpdatedActivityMode = NO;
-    // 通知容器，activityMode 发生了变化
-    [self.container screenChangedActivityMode:self];
-  }
-  [super finalizeUpdates:updateMask];
 }
 
 + (react::ComponentDescriptorProvider)componentDescriptorProvider
@@ -99,13 +72,13 @@ namespace react = facebook::react;
   return NO;
 }
 
-#pragma mark - Events → 转发给 JS
+#pragma mark - Events → 转发给 JS（payload 带 routeID 让 JS 用 UUID 区分实例）
 
 - (void)emitWillAppear
 {
   if (_eventEmitter) {
     std::static_pointer_cast<const react::HybridScreenEventEmitter>(_eventEmitter)
-        ->onWillAppear({});
+        ->onWillAppear({.routeID = RCTStringFromNSString(_routeID ?: @"")});
   }
 }
 
@@ -113,7 +86,7 @@ namespace react = facebook::react;
 {
   if (_eventEmitter) {
     std::static_pointer_cast<const react::HybridScreenEventEmitter>(_eventEmitter)
-        ->onDidAppear({});
+        ->onDidAppear({.routeID = RCTStringFromNSString(_routeID ?: @"")});
   }
 }
 
@@ -121,7 +94,7 @@ namespace react = facebook::react;
 {
   if (_eventEmitter) {
     std::static_pointer_cast<const react::HybridScreenEventEmitter>(_eventEmitter)
-        ->onWillDisappear({});
+        ->onWillDisappear({.routeID = RCTStringFromNSString(_routeID ?: @"")});
   }
 }
 
@@ -129,7 +102,7 @@ namespace react = facebook::react;
 {
   if (_eventEmitter) {
     std::static_pointer_cast<const react::HybridScreenEventEmitter>(_eventEmitter)
-        ->onDidDisappear({});
+        ->onDidDisappear({.routeID = RCTStringFromNSString(_routeID ?: @"")});
   }
 }
 
@@ -137,7 +110,7 @@ namespace react = facebook::react;
 {
   if (_eventEmitter) {
     std::static_pointer_cast<const react::HybridScreenEventEmitter>(_eventEmitter)
-        ->onNativeDismiss({});
+        ->onNativeDismiss({.routeID = RCTStringFromNSString(_routeID ?: @"")});
   }
 }
 

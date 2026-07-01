@@ -2,22 +2,18 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import HybridScreenNativeComponent from './fabric/HybridScreenNativeComponent';
 
-type ActivityMode = 'attached' | 'detached';
-
 interface HybridScreenProps {
-  screenKey: string;
-  activityMode: ActivityMode;
+  routeID: string;
   children: React.ReactNode;
-  onNativeDismiss?: (screenKey: string) => void;
-  onWillAppear?: () => void;
-  onDidAppear?: () => void;
-  onWillDisappear?: () => void;
-  onDidDisappear?: () => void;
+  onNativeDismiss?: (routeID: string) => void;
+  onWillAppear?: (routeID: string) => void;
+  onDidAppear?: (routeID: string) => void;
+  onWillDisappear?: (routeID: string) => void;
+  onDidDisappear?: (routeID: string) => void;
 }
 
 export default function HybridScreen({
-  screenKey,
-  activityMode,
+  routeID,
   children,
   onNativeDismiss,
   onWillAppear,
@@ -28,13 +24,12 @@ export default function HybridScreen({
   return (
     <HybridScreenNativeComponent
       style={StyleSheet.absoluteFill}
-      screenKey={screenKey}
-      activityMode={activityMode}
-      onNativeDismiss={() => onNativeDismiss?.(screenKey)}
-      onWillAppear={onWillAppear}
-      onDidAppear={onDidAppear}
-      onWillDisappear={onWillDisappear}
-      onDidDisappear={onDidDisappear}>
+      routeID={routeID}
+      onNativeDismiss={(e) => onNativeDismiss?.(e.nativeEvent.routeID)}
+      onWillAppear={(e) => onWillAppear?.(e.nativeEvent.routeID)}
+      onDidAppear={(e) => onDidAppear?.(e.nativeEvent.routeID)}
+      onWillDisappear={(e) => onWillDisappear?.(e.nativeEvent.routeID)}
+      onDidDisappear={(e) => onDidDisappear?.(e.nativeEvent.routeID)}>
       {children}
     </HybridScreenNativeComponent>
   );

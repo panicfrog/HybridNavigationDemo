@@ -5,54 +5,69 @@ import HybridScreen from './HybridScreen';
 import { hybridNavigationEmitter, registerScreen } from './HybridNavigation';
 import { screens } from './screens';
 
-// 封装容器：
-// 1. 启动时根据 screens map 自动注册所有 RN 页面到 YYPRouter
-// 2. 监听 YYPRouter 的 pushRoute 事件，把 routePath 加入 activeScreens，params 解析后存到 screenParams
-// 3. 用 screens map 渲染所有 HybridScreen 作为 HybridContainer 的子组件，把 params 作为 prop 注入
-export default function HybridNavigationRoot({ routePath = 'default' }: { routePath?: string }) {
-  const [activeScreens, setActiveScreens] = useState<Set<string>>(new Set());
-  const [screenParams, setScreenParams] = useState<Record<string, any>>({});
+type ActiveScreen = {
+  routeID: string;
+  routePath: string;
+  params?: any;
+};
+
+// 混合导航根容器：
+// 1. 启动时按 screens map 注册所有 RN 页面到 YYPRouter（仅注册，不渲染）
+// 2. 监听 YYPRouter 的 pushRoute 事件，按 routeID 加入 Map（动态渲染，按需挂载）
+// 3. 监听 HybridScreen 的 onNativeDismiss，按 routeID 精确移除
+// 4. 同 routePath push 两次时，routeID 区分两个实例（React key = routeID）
+export default function HybridNavigationRoot() {
+  const [activeScreens, setActiveScreens] = useState<Map<string, ActiveScreen>>(new Map());
 
   useEffect(() => {
     Object.entries(screens).forEach(([key, def]) => registerScreen(key, def));
 
     const sub = hybridNavigationEmitter.addListener(
       'YYPNavPushRN',
-      (event: { routePath: string; module: string; params?: string }) => {
-        setActiveScreens(prev => new Set([...prev, event.routePath]));
+      (event: { routeID: string; routePath: string; module: string; params?: string }) => {
+        if (!event.routeID) {
+          console.warn('[HybridNav] YYPNavPushRN 缺少 routeID', event);
+          return;
+        }
+        let params: any;
         if (event.params) {
           try {
-            const parsed = JSON.parse(event.params);
-            setScreenParams(prev => ({ ...prev, [event.routePath]: parsed }));
+            params = JSON.parse(event.params);
           } catch (e) {
             console.error('[HybridNav] Failed to parse params for', event.routePath, e);
           }
         }
+        setActiveScreens(prev => {
+          const next = new Map(prev);
+          next.set(event.routeID, { routeID: event.routeID, routePath: event.routePath, params });
+          return next;
+        });
       },
     );
     return () => sub.remove();
   }, []);
 
-  const handleNativeDismiss = (screenKey: string) => {
+  const handleNativeDismiss = (routeID: string) => {
     setActiveScreens(prev => {
-      const next = new Set(prev);
-      next.delete(screenKey);
+      if (!prev.has(routeID)) return prev;
+      const next = new Map(prev);
+      next.delete(routeID);
       return next;
     });
   };
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      <HybridContainer routePath={routePath}>
-        {Object.entries(screens).map(([key, def]) => {
+      <HybridContainer>
+        {Array.from(activeScreens.values()).map(({ routeID, routePath, params }) => {
+          const def = screens[routePath];
+          if (!def) {
+            console.warn('[HybridNav] 未注册的 routePath:', routePath);
+            return null;
+          }
           const Screen = def.screen;
-          const params = screenParams[key];
           return (
-            <HybridScreen
-              key={key}
-              screenKey={key}
-              activityMode={activeScreens.has(key) ? 'attached' : 'detached'}
-              onNativeDismiss={handleNativeDismiss}>
+            <HybridScreen key={routeID} routeID={routeID} onNativeDismiss={handleNativeDismiss}>
               <Screen params={params} />
             </HybridScreen>
           );

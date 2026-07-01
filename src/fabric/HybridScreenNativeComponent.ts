@@ -1,18 +1,16 @@
 import type { CodegenTypes as CT, ViewProps } from 'react-native';
 import { codegenNativeComponent } from 'react-native';
 
-type GenericEmptyEvent = Readonly<{}>;
-type ActivityMode = 'detached' | 'attached';
+type ScreenEvent = Readonly<{ routeID: string }>;
 
 export interface NativeProps extends ViewProps {
-  activityMode?: CT.WithDefault<ActivityMode, 'detached'>;
-  screenKey: string;
+  routeID: string;
 
-  onWillAppear?: CT.DirectEventHandler<GenericEmptyEvent> | undefined;
-  onDidAppear?: CT.DirectEventHandler<GenericEmptyEvent> | undefined;
-  onWillDisappear?: CT.DirectEventHandler<GenericEmptyEvent> | undefined;
-  onDidDisappear?: CT.DirectEventHandler<GenericEmptyEvent> | undefined;
-  onNativeDismiss?: CT.DirectEventHandler<GenericEmptyEvent> | undefined;
+  onWillAppear?: CT.DirectEventHandler<ScreenEvent> | undefined;
+  onDidAppear?: CT.DirectEventHandler<ScreenEvent> | undefined;
+  onWillDisappear?: CT.DirectEventHandler<ScreenEvent> | undefined;
+  onDidDisappear?: CT.DirectEventHandler<ScreenEvent> | undefined;
+  onNativeDismiss?: CT.DirectEventHandler<ScreenEvent> | undefined;
 }
 
 export default codegenNativeComponent<NativeProps>('HybridScreen');

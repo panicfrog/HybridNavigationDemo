@@ -15,6 +15,18 @@ export default function ScreenB({ params }: ScreenBProps) {
         style={styles.button}
         onPress={async () => {
           try {
+            await pushRoute('B', { title: 'From B' });
+            console.log('[ScreenB] 另一个 B push 完成');
+          } catch (e) {
+            console.error('[ScreenB] pushRoute B failed:', e);
+          }
+        }}>
+        <Text style={styles.buttonText}>Push Another B (title=From B) →</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={async () => {
+          try {
             await pushRoute('C', { message: 'Hi from B' });
             console.log('[ScreenB] C push 完成');
           } catch (e) {
@@ -53,10 +65,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 10,
+    marginTop: 12,
   },
   badButton: {
-    marginTop: 16,
     backgroundColor: '#BF360C',
   },
   buttonText: { color: 'white', fontSize: 17, fontWeight: '600' },
 });
+

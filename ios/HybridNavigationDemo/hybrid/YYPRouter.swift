@@ -94,16 +94,17 @@ public final class YYPRouter {
   }
   private var pendingQueue: [String: [PendingOperation]] = [:]
 
-  /// RN push 的上下文暂存：HybridContainer routePath（"default"）→ FIFO 队列
-  /// REACT_NATIVE 路径 pushRoute 入口只发通知，真正 push 在 onEvent → executePendingOperations 才发生
-  /// 这里把 routePath/module/params/completion 一起暂存，等 onEvent ScreenDidMount 入队时取出 + 给 controller 关联 RouteEntry
+  /// RN push 的上下文暂存：UUID → 单个 context（每次 push 一个 UUID，主键）
+  /// REACT_NATIVE 路径 pushRoute 入口分配 UUID + 发 pushRoute 通知给 JS（含 routeID）+ 暂存 context；
+  /// JS 用 routeID 渲染 HybridScreen → Fabric mount → onEvent ScreenDidMount 携带 routeID → 这里 removeValue(forKey: id) 取出 + 关联 RouteEntry
   private struct PendingPushContext {
+    let id: UUID                // 业务路由 UUID（pushRoute 时分配，串联整个链路）
     let routePath: String       // 业务 routePath（B/C/D）
     let module: String
     let paramsJSON: String?
     let completion: (() -> Void)?
   }
-  private var pendingPushContexts: [String: [PendingPushContext]] = [:]
+  private var pendingPushContexts: [UUID: PendingPushContext] = [:]
 
   /// 当前已激活的 RouteEntry.id 集合。push 时加入；nav 转场完成（didShow）后用 nav.viewControllers 反向同步。
   /// 主要用于 onEvent ScreenDidUnmount 去重判断（如果 id 已不在 activeRouteIDs，说明已经被 pop，
@@ -203,7 +204,7 @@ public final class YYPRouter {
   public var hasPendingOperations: Bool {
     lock.lock(); defer { lock.unlock() }
     if pendingQueue.values.contains(where: { !$0.isEmpty }) { return true }
-    if pendingPushContexts.values.contains(where: { !$0.isEmpty }) { return true }
+    if !pendingPushContexts.isEmpty { return true }
     if let nav = activeNavigationController, nav.transitionCoordinator != nil { return true }
     return false
   }
@@ -351,23 +352,25 @@ public final class YYPRouter {
       }
 
     case .reactNative:
+      // 分配 UUID 作为本次 push 的唯一标识，串联 native→JS→Fabric mount→onEvent 全链路
+      let id = UUID()
       var userInfo: [String: Any] = [
         YYPRouterEventTypeUserInfoKey: YYPRouterEventPushRoute,
+        YYPRouterRouteIDUserInfoKey: id.uuidString,
         YYPRouterRoutePathUserInfoKey: routePath,
         YYPRouterModuleUserInfoKey: module,
       ]
       if let json = paramsJSON {
         userInfo[YYPRouterParamsUserInfoKey] = json
       }
-      debugPrint("[YYPRouter] push (REACT_NATIVE) routePath=\(routePath) → 发 pushRoute 通知给 JS（真正 push 等 Fabric commit）")
+      debugPrint("[YYPRouter] push (REACT_NATIVE) routePath=\(routePath) id=\(id) → 发 pushRoute 通知给 JS（真正 push 等 Fabric mount）")
       NotificationCenter.default.post(
         name: NSNotification.Name(YYPRouterNotificationName),
         object: self,
         userInfo: userInfo)
-      // context 暂存到 pendingPushContexts（按 HybridContainer routePath 分组 FIFO），等 onEvent → executePendingOperations 真正 push 时取出
-      let navKey = activeRoutePath ?? routePath
-      pendingPushContexts[navKey, default: []].append(
-        PendingPushContext(routePath: routePath, module: module, paramsJSON: paramsJSON, completion: completion))
+      // context 暂存到 pendingPushContexts[UUID]，等 onEvent ScreenDidMount 携带同 routeID 时取出 + 关联 RouteEntry
+      pendingPushContexts[id] = PendingPushContext(
+        id: id, routePath: routePath, module: module, paramsJSON: paramsJSON, completion: completion)
     }
   }
 
@@ -454,11 +457,11 @@ public final class YYPRouter {
     lock.lock(); defer { lock.unlock() }
     let info = n.userInfo ?? [:]
     let type = info[YYPRouterEventTypeUserInfoKey] as? String ?? ""
-    let routePath = info[YYPRouterRoutePathUserInfoKey] as? String ?? ""
 
+    // navKey 用 activeRoutePath（当前 demo 单 container 单 nav，足够）
     if type == YYPRouterEventFabricTransactionDidMount {
-      if !routePath.isEmpty {
-        executePendingOperations(forRoutePath: routePath)
+      if let navKey = activeRoutePath {
+        executePendingOperations(forRoutePath: navKey)
       }
       return
     }
@@ -467,36 +470,30 @@ public final class YYPRouter {
     }
 
     guard let controller = info[YYPRouterControllerUserInfoKey] as? UIViewController,
-          !routePath.isEmpty else {
+          let navKey = activeRoutePath else {
       return
     }
 
-    // activityMode 由 HybridContainerView.mm 直接放进 userInfo（避免 Swift 依赖 Fabric 类型）
-    let activityMode = (info[YYPRouterActivityModeUserInfoKey] as? NSNumber)?.intValue ?? 0
-    let isAttached = (activityMode == 1)
-
-    if type == YYPRouterEventScreenDidMount || type == YYPRouterEventScreenActivityModeDidChange {
-      if isAttached {
-        // 取出该 HybridContainer routePath 最早的暂存 context（FIFO），从中拿到业务 routePath / module / params / completion
-        // 注意：事件里的 routePath 是 HybridContainer 的 routePath（"default"），不是业务 routePath（B/C/D）
-        let navKey = routePath  // HybridContainer routePath
-        var ctx: PendingPushContext?
-        if var queue = pendingPushContexts[navKey], !queue.isEmpty {
-          ctx = queue.removeFirst()
-          pendingPushContexts[navKey] = queue.isEmpty ? nil : queue
-        }
-
-        // 创建 RouteEntry（业务 routePath 来自 ctx）并关联到 controller
-        let businessRoutePath = ctx?.routePath ?? "(unknown)"
-        let module = ctx?.module ?? "(unknown)"
-        let paramsJSON = ctx?.paramsJSON
-        let entry = RouteEntry(id: UUID(), routePath: businessRoutePath, module: module, paramsJSON: paramsJSON, viewController: controller)
-        controller.yyprouter_routeEntry = entry
-        activeRouteIDs.insert(entry.id)
-        debugPrint("[YYPRouter] ScreenDidMount → 关联 RouteEntry routePath=\(businessRoutePath) id=\(entry.id)")
-
-        pendingQueue[navKey, default: []].append(.push(controller, completion: ctx?.completion))
+    if type == YYPRouterEventScreenDidMount {
+      // 用 routeID（业务 UUID）从 pendingPushContexts 取本次 push 的上下文（routePath/module/params/completion）
+      guard let routeIDString = info[YYPRouterRouteIDUserInfoKey] as? String,
+            !routeIDString.isEmpty,
+            let routeID = UUID(uuidString: routeIDString) else {
+        debugPrint("[YYPRouter] ScreenDidMount 缺少 routeID，忽略")
+        return
       }
+      guard let ctx = pendingPushContexts.removeValue(forKey: routeID) else {
+        debugPrint("[YYPRouter] ScreenDidMount routeID=\(routeID) 在 pendingPushContexts 找不到（已 cancel 或重复），忽略")
+        return
+      }
+
+      // 关联 RouteEntry（业务 routePath 来自 ctx，UUID 跟 push 时分配的相同）
+      let entry = RouteEntry(id: routeID, routePath: ctx.routePath, module: ctx.module, paramsJSON: ctx.paramsJSON, viewController: controller)
+      controller.yyprouter_routeEntry = entry
+      activeRouteIDs.insert(routeID)
+      debugPrint("[YYPRouter] ScreenDidMount → 关联 RouteEntry routePath=\(ctx.routePath) id=\(routeID)")
+
+      pendingQueue[navKey, default: []].append(.push(controller, completion: ctx.completion))
     } else if type == YYPRouterEventScreenDidUnmount {
       // 用 RouteEntry.id 去重：如果 id 已不在 activeRouteIDs（说明已被 nav pop，syncStackAfterTransition 移除过），
       // 则这是 pop 的副作用 Fabric unmount 通知，忽略不处理

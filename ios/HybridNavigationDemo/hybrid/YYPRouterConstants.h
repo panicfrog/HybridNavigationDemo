@@ -13,17 +13,15 @@ extern NSString *const YYPRouterNotificationName;
 // 事件类型（userInfo[YYPRouterEventTypeUserInfoKey]）
 extern NSString *const YYPRouterEventScreenDidMount;
 extern NSString *const YYPRouterEventScreenDidUnmount;
-extern NSString *const YYPRouterEventScreenActivityModeDidChange;
 extern NSString *const YYPRouterEventFabricTransactionDidMount;
 extern NSString *const YYPRouterEventPushRoute;
 
 // userInfo keys
 extern NSString *const YYPRouterEventTypeUserInfoKey;
+extern NSString *const YYPRouterRouteIDUserInfoKey;       // NSString (UUID uuidString)，跨 native↔JS 主键
 extern NSString *const YYPRouterRoutePathUserInfoKey;
 extern NSString *const YYPRouterModuleUserInfoKey;
 extern NSString *const YYPRouterParamsUserInfoKey;
 extern NSString *const YYPRouterControllerUserInfoKey;
-extern NSString *const YYPRouterActivityModeUserInfoKey;          // NSNumber (int) 0=detached 1=attached
-extern NSString *const YYPRouterIsNativelyDismissedUserInfoKey;  // NSNumber (BOOL)
 
 NS_ASSUME_NONNULL_END

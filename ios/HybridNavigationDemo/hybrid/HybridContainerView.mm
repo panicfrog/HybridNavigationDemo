@@ -27,30 +27,23 @@ namespace react = facebook::react;
 - (void)updateProps:(const react::Props::Shared &)props
            oldProps:(const react::Props::Shared &)oldProps
 {
-  const auto &newP = *std::static_pointer_cast<const react::HybridContainerProps>(props);
-  const auto &oldP = *std::static_pointer_cast<const react::HybridContainerProps>(_props);
-
-  if (oldP.routePath != newP.routePath) {
-    _routePath = RCTNSStringFromStringNilIfEmpty(newP.routePath);
-  }
-
+  // HybridContainerProps 已无可读字段（routePath prop 已删），保留方法供未来扩展
   [super updateProps:props oldProps:oldProps];
 }
 
 #pragma mark - 发送 router 事件
 
-- (void)postRouterEvent:(NSString *)type controller:(nullable UIViewController *)controller
+- (void)postRouterEvent:(NSString *)type
+              controller:(nullable UIViewController *)controller
+                 routeID:(nullable NSString *)routeID
 {
   NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
   userInfo[YYPRouterEventTypeUserInfoKey] = type;
-  userInfo[YYPRouterRoutePathUserInfoKey] = _routePath ?: @"";
   if (controller != nil) {
     userInfo[YYPRouterControllerUserInfoKey] = controller;
-    // 把 activityMode / isNativelyDismissed 作为 primitive 放进 userInfo，
-    // 避免 YYPRouter.swift 反向依赖 HybridScreenComponentView（Fabric 类型，含 C++）
-    HybridScreenComponentView *screen = (HybridScreenComponentView *)controller.view;
-    userInfo[YYPRouterActivityModeUserInfoKey] = @(screen.activityMode);
-    userInfo[YYPRouterIsNativelyDismissedUserInfoKey] = @(screen.isNativelyDismissed);
+  }
+  if (routeID != nil && routeID.length > 0) {
+    userInfo[YYPRouterRouteIDUserInfoKey] = routeID;
   }
   [[NSNotificationCenter defaultCenter] postNotificationName:YYPRouterNotificationName
                                                       object:self
@@ -67,7 +60,9 @@ namespace react = facebook::react;
 
   HybridScreenComponentView *screen = (HybridScreenComponentView *)childView;
   screen.container = self;
-  [self postRouterEvent:YYPRouterEventScreenDidMount controller:screen.controller];
+  [self postRouterEvent:YYPRouterEventScreenDidMount
+             controller:screen.controller
+                routeID:screen.routeID];
 }
 
 - (void)unmountChildComponentView:(UIView<RCTComponentViewProtocol> *)childView
@@ -75,14 +70,9 @@ namespace react = facebook::react;
 {
   HybridScreenComponentView *screen = (HybridScreenComponentView *)childView;
   screen.container = nil;
-  [self postRouterEvent:YYPRouterEventScreenDidUnmount controller:screen.controller];
-}
-
-#pragma mark - Communication from HybridScreen
-
-- (void)screenChangedActivityMode:(nonnull HybridScreenComponentView *)screen
-{
-  [self postRouterEvent:YYPRouterEventScreenActivityModeDidChange controller:screen.controller];
+  [self postRouterEvent:YYPRouterEventScreenDidUnmount
+             controller:screen.controller
+                routeID:screen.routeID];
 }
 
 #pragma mark - RCTMountingTransactionObserving — 时序控制核心
@@ -97,7 +87,7 @@ namespace react = facebook::react;
                 withSurfaceTelemetry:(const facebook::react::SurfaceTelemetry &)telemetry
 {
   // Fabric 渲染树提交完成，通知 router 可以 flush pending push/pop
-  [self postRouterEvent:YYPRouterEventFabricTransactionDidMount controller:nil];
+  [self postRouterEvent:YYPRouterEventFabricTransactionDidMount controller:nil routeID:nil];
 }
 
 #pragma mark - Codegen

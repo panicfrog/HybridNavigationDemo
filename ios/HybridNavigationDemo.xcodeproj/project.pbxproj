@@ -8,9 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		0A0A0A0A0A0A0A0A0A0A0B02 /* YYPRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0B01 /* YYPRouter.swift */; };
-		0A0A0A0A0A0A0A0A0A0A0D02 /* YYPRouterNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0D01 /* YYPRouterNavigationController.swift */; };
 		0A0A0A0A0A0A0A0A0A0A0B04 /* NativeViewControllerC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0B03 /* NativeViewControllerC.swift */; };
 		0A0A0A0A0A0A0A0A0A0A0C03 /* YYPRouterConstants.m in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0C02 /* YYPRouterConstants.m */; };
+		0A0A0A0A0A0A0A0A0A0A0D02 /* YYPRouterNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0A0A0A0A0A0A0A0A0A0D01 /* YYPRouterNavigationController.swift */; };
 		0C80B921A6F3F58F76C31292 /* libPods-HybridNavigationDemo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-HybridNavigationDemo.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		27CDB0E82FF275EC0036BC09 /* YYPNavigationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27CDB0E72FF275EC0036BC09 /* YYPNavigationModule.swift */; };
@@ -30,10 +30,10 @@
 
 /* Begin PBXFileReference section */
 		0A0A0A0A0A0A0A0A0A0A0B01 /* YYPRouter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YYPRouter.swift; sourceTree = "<group>"; };
-		0A0A0A0A0A0A0A0A0A0A0D01 /* YYPRouterNavigationController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YYPRouterNavigationController.swift; sourceTree = "<group>"; };
 		0A0A0A0A0A0A0A0A0A0A0B03 /* NativeViewControllerC.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeViewControllerC.swift; sourceTree = "<group>"; };
 		0A0A0A0A0A0A0A0A0A0A0C01 /* YYPRouterConstants.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = YYPRouterConstants.h; sourceTree = "<group>"; };
 		0A0A0A0A0A0A0A0A0A0A0C02 /* YYPRouterConstants.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = YYPRouterConstants.m; sourceTree = "<group>"; };
+		0A0A0A0A0A0A0A0A0A0A0D01 /* YYPRouterNavigationController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YYPRouterNavigationController.swift; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* HybridNavigationDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HybridNavigationDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = HybridNavigationDemo/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = HybridNavigationDemo/Info.plist; sourceTree = "<group>"; };
@@ -51,7 +51,7 @@
 		89AD9E1AE1A8C8B0498CA805 /* NativeViewControllerA.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeViewControllerA.swift; sourceTree = "<group>"; };
 		A15E3A00F29226E3F77CDE18 /* HybridScreenComponentView.mm */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.objcpp; path = HybridScreenComponentView.mm; sourceTree = "<group>"; };
 		B55DDE6D1B6D6681A3D77BD5 /* HybridScreenComponentView.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = HybridScreenComponentView.h; sourceTree = "<group>"; };
-		D53757802E9CC623E85E6460 /* HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h"; sourceTree = "<group>"; };
+		D53757802E9CC623E85E6460 /* HybridNavigationDemo-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h"; sourceTree = "<group>"; };
 		D811CEA076E281C5FBD9BB6F /* HybridScreenController.mm */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.objcpp; path = HybridScreenController.mm; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -80,7 +80,7 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
-				D53757802E9CC623E85E6460 /* HybridNavigationDemo/HybridNavigationDemo-Bridging-Header.h */,
+				D53757802E9CC623E85E6460 /* HybridNavigationDemo-Bridging-Header.h */,
 				354076E9B0478F4227AA9398 /* hybrid */,
 				164FB10A66650E2798E75651 /* native */,
 			);
@@ -260,13 +260,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -303,13 +299,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-HybridNavigationDemo/Pods-HybridNavigationDemo-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
