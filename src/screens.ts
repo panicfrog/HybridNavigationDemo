@@ -5,7 +5,7 @@ import ScreenD from './ScreenD';
 
 export interface ScreenDefinition<P = any> {
   screen: ComponentType<{ params?: P }>;
-  /// 可选 zod schema。pushRoute 时用 safeParse 校验 params；registerScreen 时转 JSON Schema 传给原生
+  /// registerScreen 时转 JSON Schema 传给原生；参数校验统一由原生 YYPRouter 完成（JS 不再校验）
   schema?: ZodType<P>;
 }
 

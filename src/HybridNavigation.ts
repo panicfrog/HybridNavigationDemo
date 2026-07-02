@@ -1,6 +1,6 @@
 import { NativeEventEmitter, NativeModules } from 'react-native';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { screens, type ScreenDefinition } from './screens';
+import { type ScreenDefinition } from './screens';
 
 const { YYPNavigationModule } = NativeModules;
 
@@ -16,15 +16,8 @@ export function registerScreen(routePath: string, def: ScreenDefinition, module:
 }
 
 /// 主动 push 一个页面，等原生转场动画完成后 resolve。
-/// params 先用 zod schema 校验（不通过直接 throw，不发到原生）。
+/// 参数校验统一由原生 YYPRouter 用 JSON Schema 完成（schema 来源见 screens.ts）。
 export async function pushRoute(routePath: string, params?: any, module: string = 'default'): Promise<void> {
-  const def = screens[routePath];
-  if (def?.schema && params !== undefined) {
-    const result = def.schema.safeParse(params);
-    if (!result.success) {
-      throw new Error(`Invalid params for ${routePath}: ${JSON.stringify(result.error.issues)}`);
-    }
-  }
   const paramsJSON = params ? JSON.stringify(params) : '';
   await YYPNavigationModule.pushRoute(routePath, module, paramsJSON);
 }

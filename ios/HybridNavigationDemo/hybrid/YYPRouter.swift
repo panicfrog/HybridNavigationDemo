@@ -315,6 +315,20 @@ public final class YYPRouter {
       throw YYPRouterError.noRegistration(routePath: routePath, module: module)
     }
 
+    // 统一 Schema 校验（IOS_NATIVE 与 REACT_NATIVE 共用同一套校验逻辑）
+    if let schema = reg.schema {
+      let json = paramsJSON ?? "{}"
+      let result: ValidationResult
+      do {
+        result = try schema.validate(instance: json)
+      } catch {
+        throw YYPRouterError.paramsValidationThrew(underlying: error)
+      }
+      if !result.isValid {
+        throw YYPRouterError.paramsValidationFailed(errors: result.errors ?? [])
+      }
+    }
+
     switch reg.platform {
     case .iosNative:
       guard let nav = activeNavigationController else {
@@ -325,19 +339,6 @@ public final class YYPRouter {
       }
 
       let json = paramsJSON ?? "{}"
-
-      // Schema 验证（若有）
-      if let schema = reg.schema {
-        let result: ValidationResult
-        do {
-          result = try schema.validate(instance: json)
-        } catch {
-          throw YYPRouterError.paramsValidationThrew(underlying: error)
-        }
-        if !result.isValid {
-          throw YYPRouterError.paramsValidationFailed(errors: result.errors ?? [])
-        }
-      }
 
       // type-safe 创建 + 关联 RouteEntry
       let vc = try create(json)
