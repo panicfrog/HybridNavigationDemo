@@ -12,6 +12,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, weak, nullable) HybridContainerView *container;
 @property (nonatomic, strong, readonly) HybridScreenController *controller;
 @property (nonatomic, copy, nullable) NSString *routeID;
+@property (nonatomic, copy, nullable) NSString *routePath;
 
 - (void)emitWillAppear;
 - (void)emitDidAppear;

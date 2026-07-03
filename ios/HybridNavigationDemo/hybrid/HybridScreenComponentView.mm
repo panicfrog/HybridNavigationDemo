@@ -59,6 +59,10 @@ namespace react = facebook::react;
     _routeID = RCTNSStringFromStringNilIfEmpty(newP.routeID);
   }
 
+  if (oldP.routePath != newP.routePath) {
+    _routePath = RCTNSStringFromStringNilIfEmpty(newP.routePath);
+  }
+
   [super updateProps:props oldProps:oldProps];
 }
 

@@ -5,6 +5,7 @@ type ScreenEvent = Readonly<{ routeID: string }>;
 
 export interface NativeProps extends ViewProps {
   routeID: string;
+  routePath: string;
 
   onWillAppear?: CT.DirectEventHandler<ScreenEvent> | undefined;
   onDidAppear?: CT.DirectEventHandler<ScreenEvent> | undefined;

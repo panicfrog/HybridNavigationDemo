@@ -13,3 +13,5 @@ NSString *const YYPRouterRoutePathUserInfoKey = @"routePath";
 NSString *const YYPRouterModuleUserInfoKey = @"module";
 NSString *const YYPRouterParamsUserInfoKey = @"params";
 NSString *const YYPRouterControllerUserInfoKey = @"controller";
+
+NSString *const YYPRouterRootIndexPath = @"__index__";

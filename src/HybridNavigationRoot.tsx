@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import HybridContainer from './HybridContainer';
 import HybridScreen from './HybridScreen';
 import { hybridNavigationEmitter, registerScreen } from './HybridNavigation';
-import { screens } from './screens';
+import { screens, INDEX_PATH } from './screens';
 
 type ActiveScreen = {
   routeID: string;
@@ -21,6 +21,18 @@ export default function HybridNavigationRoot() {
 
   useEffect(() => {
     Object.entries(screens).forEach(([key, def]) => registerScreen(key, def));
+
+    // 启动期主动 mount Root 页(routeID = module 名 "default")。
+    // registerScreen 已同步完成,原生端 rootModules 就绪。
+    // setActiveScreens 触发 re-render → Fabric mount → onEvent ScreenDidMount routePath=__index__ →
+    // 原生换 window.rootViewController 为新 nav(rootVC = ScreenRoot)。
+    if (screens[INDEX_PATH]) {
+      setActiveScreens(prev => {
+        const next = new Map(prev);
+        next.set('default', { routeID: 'default', routePath: INDEX_PATH });
+        return next;
+      });
+    }
 
     const sub = hybridNavigationEmitter.addListener(
       'YYPNavPushRN',
@@ -67,7 +79,7 @@ export default function HybridNavigationRoot() {
           }
           const Screen = def.screen;
           return (
-            <HybridScreen key={routeID} routeID={routeID} onNativeDismiss={handleNativeDismiss}>
+            <HybridScreen key={routeID} routeID={routeID} routePath={routePath} onNativeDismiss={handleNativeDismiss}>
               <Screen params={params} />
             </HybridScreen>
           );

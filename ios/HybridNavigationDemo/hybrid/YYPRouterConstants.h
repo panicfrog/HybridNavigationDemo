@@ -24,4 +24,8 @@ extern NSString *const YYPRouterModuleUserInfoKey;
 extern NSString *const YYPRouterParamsUserInfoKey;
 extern NSString *const YYPRouterControllerUserInfoKey;
 
+// 约定值:RN 页作为新 nav 的 rootViewController 时,该 module 的 Root 页 routePath
+// JS 侧 INDEX_PATH 必须与此一致(见 src/screens.ts)
+extern NSString *const YYPRouterRootIndexPath;
+
 NS_ASSUME_NONNULL_END

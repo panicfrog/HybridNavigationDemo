@@ -4,6 +4,7 @@ import HybridScreenNativeComponent from './fabric/HybridScreenNativeComponent';
 
 interface HybridScreenProps {
   routeID: string;
+  routePath: string;
   children: React.ReactNode;
   onNativeDismiss?: (routeID: string) => void;
   onWillAppear?: (routeID: string) => void;
@@ -14,6 +15,7 @@ interface HybridScreenProps {
 
 export default function HybridScreen({
   routeID,
+  routePath,
   children,
   onNativeDismiss,
   onWillAppear,
@@ -25,6 +27,7 @@ export default function HybridScreen({
     <HybridScreenNativeComponent
       style={StyleSheet.absoluteFill}
       routeID={routeID}
+      routePath={routePath}
       onNativeDismiss={(e) => onNativeDismiss?.(e.nativeEvent.routeID)}
       onWillAppear={(e) => onWillAppear?.(e.nativeEvent.routeID)}
       onDidAppear={(e) => onDidAppear?.(e.nativeEvent.routeID)}

@@ -36,6 +36,7 @@ namespace react = facebook::react;
 - (void)postRouterEvent:(NSString *)type
               controller:(nullable UIViewController *)controller
                  routeID:(nullable NSString *)routeID
+               routePath:(nullable NSString *)routePath
 {
   NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
   userInfo[YYPRouterEventTypeUserInfoKey] = type;
@@ -44,6 +45,9 @@ namespace react = facebook::react;
   }
   if (routeID != nil && routeID.length > 0) {
     userInfo[YYPRouterRouteIDUserInfoKey] = routeID;
+  }
+  if (routePath != nil && routePath.length > 0) {
+    userInfo[YYPRouterRoutePathUserInfoKey] = routePath;
   }
   [[NSNotificationCenter defaultCenter] postNotificationName:YYPRouterNotificationName
                                                       object:self
@@ -62,7 +66,8 @@ namespace react = facebook::react;
   screen.container = self;
   [self postRouterEvent:YYPRouterEventScreenDidMount
              controller:screen.controller
-                routeID:screen.routeID];
+                routeID:screen.routeID
+             routePath:screen.routePath];
 }
 
 - (void)unmountChildComponentView:(UIView<RCTComponentViewProtocol> *)childView
@@ -72,7 +77,8 @@ namespace react = facebook::react;
   screen.container = nil;
   [self postRouterEvent:YYPRouterEventScreenDidUnmount
              controller:screen.controller
-                routeID:screen.routeID];
+                routeID:screen.routeID
+             routePath:screen.routePath];
 }
 
 #pragma mark - RCTMountingTransactionObserving — 时序控制核心
@@ -87,7 +93,7 @@ namespace react = facebook::react;
                 withSurfaceTelemetry:(const facebook::react::SurfaceTelemetry &)telemetry
 {
   // Fabric 渲染树提交完成，通知 router 可以 flush pending push/pop
-  [self postRouterEvent:YYPRouterEventFabricTransactionDidMount controller:nil routeID:nil];
+  [self postRouterEvent:YYPRouterEventFabricTransactionDidMount controller:nil routeID:nil routePath:nil];
 }
 
 #pragma mark - Codegen

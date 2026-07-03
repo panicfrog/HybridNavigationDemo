@@ -27,6 +27,8 @@ public enum YYPRouterError: Error {
   case paramsParseFailed(issues: [ParseIssue])
   /// Schemable.schema.parse throws（JSON decode 失败）
   case paramsParseThrew(underlying: Error)
+  /// 业务层误用,例如 pushRoute('__index__')。Root 页只能由启动期主动 mount
+  case invalidOperation(String)
 }
 
 /// 路由栈的单个节点。每次 push 创建一个实例（含唯一 UUID）。
@@ -74,6 +76,8 @@ public final class YYPRouter {
     let schema: Schema?
     /// IOS_NATIVE 用：接收 params JSON 字符串，返回 VC（throws 让 parse 错误冒泡）
     let createNativeViewController: ((String) throws -> UIViewController)?
+    /// REACT_NATIVE Root 页(module 的 __index__ 注册项)。用于 onEvent 区分 Root mount
+    let isRoot: Bool
   }
 
   // weak wrapper（替代 NSMapTable）
@@ -86,6 +90,14 @@ public final class YYPRouter {
   private var activeRoutePath: String?
   private var registrations: [String: Registration] = [:]
   private var eventObserver: NSObjectProtocol?
+
+  /// 已注册 Root 页的 module 集合(routePath == __index__)。onEvent 用作快速判据
+  private var rootModules: Set<String> = []
+
+  /// attachWindow 注入的 window/rootView 引用。Root 页 mount 时换 window.rootViewController 用
+  /// rootView weak 引用防止循环;defensive 检查 iOS 是否在 rootVC setter 中清掉 overlay
+  private weak var attachedWindow: UIWindow?
+  private weak var attachedRootView: UIView?
 
   // 统一操作队列（按 routePath 分组，FIFO 顺序执行；push 和 pop 入同一队列）
   private enum PendingOperation {
@@ -125,6 +137,27 @@ public final class YYPRouter {
     if let obs = eventObserver {
       NotificationCenter.default.removeObserver(obs)
     }
+  }
+
+  // MARK: - Window 注入
+
+  /// AppDelegate 在 makeKeyAndVisible + addSubview(rootView) 之后调用。
+  /// 让 YYPRouter 持有 window/rootView 引用,Root 页 mount 时换 window.rootViewController 用。
+  public func attachWindow(_ window: UIWindow, rootView: UIView?) {
+    lock.lock(); defer { lock.unlock() }
+    attachedWindow = window
+    attachedRootView = rootView
+  }
+
+  /// 声明该 module 的 Root 槽位。已存在则 throws。
+  /// RN 和原生 registerScreen 共用,确保一个 module 至多一个 __index__。
+  /// 调用方必须已持 lock。
+  private func claimRootSlot(module: String) throws {
+    if rootModules.contains(module) {
+      throw YYPRouterError.invalidOperation(
+        "module \(module) already has a Root page (__index__); duplicate registration rejected")
+    }
+    rootModules.insert(module)
   }
 
   // MARK: - navController 注册表
@@ -211,16 +244,20 @@ public final class YYPRouter {
 
   // MARK: - 页面注册表
 
-  /// 原生页面注册：泛型，从 Provider.Params.schema 自动拿 schema 和 parse
+  /// 原生页面注册:泛型,从 Provider.Params.schema 自动拿 schema 和 parse。
+  /// 若 routePath == __index__:立即构造 VC + 换 window.rootViewController(原生代码同步,不等 mount)。
+  /// throws:重复注册同 module 的 __index__ 时拒绝。
   public func registerScreen<Provider: YYPRouterScreenProvider>(
     _ routePath: String,
     module: String,
     providerClass: Provider.Type
-  ) {
-    lock.lock(); defer { lock.unlock() }
+  ) throws {
     guard !routePath.isEmpty, !module.isEmpty else { return }
 
+    let isRoot = (routePath == YYPRouterRootIndexPath)
+
     let schema = Provider.Params.schema.definition()
+    // factory:接收 params JSON 字符串,schema.parse 后调 Provider.router_createViewController
     let create: (String) throws -> UIViewController = { json in
       let parsed: Parsed<Provider.Params, ParseIssue>
       do {
@@ -234,12 +271,33 @@ public final class YYPRouter {
       return Provider.router_createViewController(withParams: params)
     }
 
+    // 锁外先构造 Root VC(若 isRoot)。走 create("{}") 路径(经 schema parse),
+    // 避免直接调 Provider.Params()(generic context 下 Swift 编译器看不到 @Schemable 生成的 init)。
+    // 失败时 throws,不污染 rootModules / registrations 状态
+    let rootVC: UIViewController?
+    if isRoot {
+      rootVC = try create("{}")
+    } else {
+      rootVC = nil
+    }
+
+    lock.lock()
+    if isRoot {
+      try claimRootSlot(module: module)
+    }
     registrations["\(module)/\(routePath)"] = Registration(
       routePath: routePath,
       module: module,
       platform: .iosNative,
       schema: schema,
-      createNativeViewController: create)
+      createNativeViewController: create,
+      isRoot: isRoot)
+    lock.unlock()
+
+    // 锁外:原生 Root 立即换 root(不等 Fabric mount,因为原生 VC 已构造)
+    if let vc = rootVC {
+      attachRootController(vc, moduleKey: module, platform: .iosNative)
+    }
   }
 
   /// RN 页面注册：从 JS 上来的 JSON Schema 字符串构建（throws：schema 构建可能失败）
@@ -263,12 +321,18 @@ public final class YYPRouter {
       schema = nil
     }
 
+    let isRoot = (routePath == YYPRouterRootIndexPath)
+    if isRoot {
+      try claimRootSlot(module: module)
+    }
+
     registrations["\(module)/\(routePath)"] = Registration(
       routePath: routePath,
       module: module,
       platform: platform,
       schema: schema,
-      createNativeViewController: nil)
+      createNativeViewController: nil,
+      isRoot: isRoot)
   }
 
   public func unregisterScreen(_ routePath: String, module: String) {
@@ -311,6 +375,10 @@ public final class YYPRouter {
     animated: Bool,
     completion: (() -> Void)?
   ) throws {
+    if routePath == YYPRouterRootIndexPath {
+      throw YYPRouterError.invalidOperation(
+        "cannot push __index__ as a normal route; Root page is mounted only via startup")
+    }
     guard let reg = registrations["\(module)/\(routePath)"] else {
       throw YYPRouterError.noRegistration(routePath: routePath, module: module)
     }
@@ -455,9 +523,19 @@ public final class YYPRouter {
   // MARK: - 通知分发（HybridContainer 事件）
 
   private func onEvent(_ n: Notification) {
-    lock.lock(); defer { lock.unlock() }
     let info = n.userInfo ?? [:]
     let type = info[YYPRouterEventTypeUserInfoKey] as? String ?? ""
+
+    // Root 分支:routePath == __index__ 时,走独立处理(锁内更新状态 + 锁外执行 UIKit)。
+    // 必须在顶部 lock 之前 dispatch,否则 window.rootViewController setter 会在锁内执行 UIKit 代码。
+    if type == YYPRouterEventScreenDidMount,
+       let routePath = info[YYPRouterRoutePathUserInfoKey] as? String,
+       routePath == YYPRouterRootIndexPath {
+      handleRootScreenDidMount(info: info)
+      return
+    }
+
+    lock.lock(); defer { lock.unlock() }
 
     // navKey 用 activeRoutePath（当前 demo 单 container 单 nav，足够）
     if type == YYPRouterEventFabricTransactionDidMount {
@@ -511,6 +589,81 @@ public final class YYPRouter {
       }
       // 不再加 PendingOperation.pop（系统 pop 由 UIKit 完成或 YYPRouter.popRoute 入队处理）
     }
+  }
+
+  // MARK: - Root 页 mount 处理(routePath == __index__)
+
+  /// Root 页 ScreenDidMount 处理(RN 路径):取 controller/moduleKey 后调 attachRootController。
+  /// 加 nav 已存在 guard,防止配置错误(原生 Root 已接管 + JS 又 mount __index__)时 RN 覆盖原生 nav。
+  private func handleRootScreenDidMount(info: [AnyHashable: Any]) {
+    guard let routeIDString = info[YYPRouterRouteIDUserInfoKey] as? String,
+          !routeIDString.isEmpty else {
+      debugPrint("[YYPRouter] Root ScreenDidMount 缺少 routeID,忽略")
+      return
+    }
+    let moduleKey = routeIDString   // Root 页约定 routeID == module 名
+
+    guard let controller = info[YYPRouterControllerUserInfoKey] as? UIViewController else {
+      debugPrint("[YYPRouter] Root ScreenDidMount module=\(moduleKey) 缺少 controller,忽略")
+      return
+    }
+
+    // guard:该 module 已有 nav(说明原生 Root 已接管),RN mount 不覆盖
+    lock.lock()
+    let existing = navControllers[moduleKey]?.value
+    lock.unlock()
+    if existing != nil {
+      debugPrint("[YYPRouter] Root ScreenDidMount module=\(moduleKey) 已有 nav(原生 Root 已接管?),忽略 RN mount")
+      return
+    }
+
+    attachRootController(controller, moduleKey: moduleKey, platform: .reactNative)
+  }
+
+  /// RN 和原生 Root 路径共用:锁内构造 nav + 更新状态(复用 buildAndRegisterRootNav),
+  /// 锁外执行 window.rootViewController 切换 + rootView defensive 重新 addSubview。
+  /// UIKit 调用放锁外避免持锁时间被 UIKit 内部代码拉长。
+  private func attachRootController(
+    _ controller: UIViewController,
+    moduleKey: String,
+    platform: YYPRouterPlatform
+  ) {
+    guard let window = attachedWindow else {
+      debugPrint("[YYPRouter] attachRootController module=\(moduleKey) 缺少 attachedWindow(未调 attachWindow?),跳过 UIKit 切换")
+      return
+    }
+
+    let newNav: YYPRouterNavigationController
+    lock.lock()
+    newNav = buildAndRegisterRootNav(controller: controller, moduleKey: moduleKey)
+    lock.unlock()
+
+    window.rootViewController = newNav
+    if let rootView = attachedRootView, rootView.superview == nil {
+      window.addSubview(rootView)
+      debugPrint("[YYPRouter] Root mount: rootView was removed by iOS, re-added")
+    }
+    debugPrint("[YYPRouter] Root mount (\(platform)) module=\(moduleKey) → 换 window.rootViewController,active=\(moduleKey)")
+  }
+
+  /// 调用方必须已持 lock
+  private func buildAndRegisterRootNav(controller: UIViewController, moduleKey: String) -> YYPRouterNavigationController {
+    let entry = RouteEntry(
+      id: UUID(),
+      routePath: YYPRouterRootIndexPath,
+      module: moduleKey,
+      paramsJSON: nil,
+      viewController: controller)
+    controller.yyprouter_routeEntry = entry
+
+    // 主动清理占位 nav 残留(不依赖新 nav 首次 didShow,因为 rootVC 首次展示不一定触发 didShow)
+    activeRouteIDs = [entry.id]
+    pendingQueue.removeValue(forKey: moduleKey)
+
+    let newNav = YYPRouterNavigationController(rootViewController: controller)
+    navControllers[moduleKey] = Weak(newNav)
+    activeRoutePath = moduleKey
+    return newNav
   }
 
   private func executePendingOperations(forRoutePath routePath: String) {

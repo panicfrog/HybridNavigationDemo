@@ -10,7 +10,7 @@
 
 @interface RCT_EXTERN_MODULE (YYPNavigationModule, RCTEventEmitter)
 
-RCT_EXTERN_METHOD(registerScreen:(NSString *)routePath
+RCT_EXTERN__BLOCKING_SYNCHRONOUS_METHOD(registerScreen:(NSString *)routePath
                   module:(NSString *)module
                   schemaJSON:(NSString *)schemaJSON)
 

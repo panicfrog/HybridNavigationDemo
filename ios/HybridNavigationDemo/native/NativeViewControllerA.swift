@@ -1,4 +1,6 @@
 import UIKit
+import JSONSchema
+import JSONSchemaBuilder
 
 class NativeViewControllerA: UIViewController {
 
@@ -64,5 +66,12 @@ class NativeViewControllerA: UIViewController {
     } catch {
       debugPrint("[NativeViewControllerA] pushRoute B failed: \(error)")
     }
+  }
+}
+
+extension NativeViewControllerA: YYPRouterScreenProvider {
+  @Schemable struct Params {}
+  static func router_createViewController(withParams params: Params) -> UIViewController {
+    return NativeViewControllerA()
   }
 }
