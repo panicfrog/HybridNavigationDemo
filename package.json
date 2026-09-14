@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
-    "ios": "react-native run-ios",
+    "ios": "react-native run-ios --simulator 'iPhone 17 Pro'",
+    "ios:device": "react-native run-ios --device",
+    "ios:xcodegen": "cd ios && xcodegen generate && pod install",
+    "ios:build": "xcodebuild -workspace ios/HybridNavigationDemo.xcworkspace -scheme HybridNavigationDemo -configuration Debug -destination 'generic/platform=iOS Simulator' build",
+    "ios:build:release": "xcodebuild -workspace ios/HybridNavigationDemo.xcworkspace -scheme HybridNavigationDemo -configuration Release -destination 'generic/platform=iOS Simulator' build",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest"

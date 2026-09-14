@@ -22,6 +22,10 @@ DerivedData
 *.xcuserstate
 **/.xcode.env.local
 
+# XcodeGen generated files
+ios/HybridNavigationDemo.xcodeproj/
+ios/HybridNavigationDemo.xcworkspace/
+
 # Android/IntelliJ
 #
 build/
