@@ -49,6 +49,16 @@
     "name": "hybridnavigationdemo",
     "type": "components",
     "jsSrcsDir": "./src/fabric",
+    "android": {
+      "components": {
+        "HybridContainer": {
+          "className": "com.hybridnavigationdemo.fabric.HybridContainerView"
+        },
+        "HybridScreen": {
+          "className": "com.hybridnavigationdemo.fabric.HybridScreenView"
+        }
+      }
+    },
     "ios": {
       "components": {
         "HybridContainer": {

@@ -1,0 +1,7 @@
+<resources>
+    <!--
+      路由栈宿主容器的稳定 id。FragmentActivity 在 onCreate 里用它做 setContentView，
+      FragmentManager 也用它做 fragment 事务与状态恢复；必须与 YYPRouterNavigationContainer 一致。
+    -->
+    <item name="router_navigation_container" type="id" />
+</resources>

@@ -6,6 +6,7 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.hybridnavigationdemo.fabric.HybridNavigationPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -14,8 +15,10 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          // 本地包不会被 autolinking 收录，必须手动注册：
+          // 否则 HybridContainer / HybridScreen 没有对应的 ViewManager，YYPRouter 也没有
+          // YYPNavigationModule 可调用，RN 根视图直接渲染失败（表现为白屏）。
+          add(HybridNavigationPackage())
         },
     )
   }

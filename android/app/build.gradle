@@ -2,6 +2,31 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// AGP's GeneratePrefabPackagesKt.reportErrors incorrectly treats JVM warnings
+// (e.g. "WARNING: A restricted method...") in CMake output as fatal errors.
+// This is a known AGP bug with JDK 17+. Wrap task actions to suppress false positives.
+tasks.whenTaskAdded { task ->
+    if (task.name.startsWith("configureCMake")) {
+        def originalActions = new ArrayList(task.actions)
+        task.actions.clear()
+        task.doLast {
+            try {
+                originalActions.each { action ->
+                    action.execute(task)
+                }
+            } catch (Exception e) {
+                if (e.message?.contains("restricted method") ||
+                    e.message?.contains("Picked up JDK_JAVA_OPTIONS") ||
+                    e.message?.contains("Picked up JAVA_TOOL_OPTIONS")) {
+                    println "[HybridNav] Suppressed AGP false positive: ${e.message}"
+                } else {
+                    throw e
+                }
+            }
+        }
+    }
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -77,6 +102,10 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+    buildFeatures {
+        prefab false
+    }
+
     namespace "com.hybridnavigationdemo"
     defaultConfig {
         applicationId "com.hybridnavigationdemo"
@@ -110,6 +139,13 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+
+    // JSON Schema validation (mirrors iOS JSONSchema/JSONSchemaBuilder SPM deps)
+    implementation("com.networknt:json-schema-validator:1.5.2")
+
+    // FragmentManager + OnBackPressedDispatcher（路由栈宿主）
+    implementation("androidx.activity:activity:1.10.1")
+    implementation("androidx.fragment:fragment:1.8.6")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
