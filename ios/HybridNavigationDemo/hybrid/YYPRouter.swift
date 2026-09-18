@@ -78,6 +78,8 @@ public final class YYPRouter {
     let createNativeViewController: ((String) throws -> UIViewController)?
     /// REACT_NATIVE Root 页(module 的 __index__ 注册项)。用于 onEvent 区分 Root mount
     let isRoot: Bool
+    /// 导航栏标题。原生页一般自己在 VC 上设 title，RN 页面由 JS 注册时传入。
+    let title: String?
   }
 
   // weak wrapper（替代 NSMapTable）
@@ -114,6 +116,7 @@ public final class YYPRouter {
     let routePath: String       // 业务 routePath（B/C/D）
     let module: String
     let paramsJSON: String?
+    let title: String?          // 导航栏标题（来自 Registration，push 时带入）
     let completion: (() -> Void)?
   }
   private var pendingPushContexts: [UUID: PendingPushContext] = [:]
@@ -291,7 +294,8 @@ public final class YYPRouter {
       platform: .iosNative,
       schema: schema,
       createNativeViewController: create,
-      isRoot: isRoot)
+      isRoot: isRoot,
+      title: nil)
     lock.unlock()
 
     // 锁外:原生 Root 立即换 root(不等 Fabric mount,因为原生 VC 已构造)
@@ -305,7 +309,8 @@ public final class YYPRouter {
     _ routePath: String,
     module: String,
     platform: YYPRouterPlatform = .reactNative,
-    schemaJSON: String?
+    schemaJSON: String?,
+    title: String? = nil
   ) throws {
     lock.lock(); defer { lock.unlock() }
     guard !routePath.isEmpty, !module.isEmpty else { return }
@@ -332,7 +337,8 @@ public final class YYPRouter {
       platform: platform,
       schema: schema,
       createNativeViewController: nil,
-      isRoot: isRoot)
+      isRoot: isRoot,
+      title: title)
   }
 
   public func unregisterScreen(_ routePath: String, module: String) {
@@ -439,7 +445,7 @@ public final class YYPRouter {
         userInfo: userInfo)
       // context 暂存到 pendingPushContexts[UUID]，等 onEvent ScreenDidMount 携带同 routeID 时取出 + 关联 RouteEntry
       pendingPushContexts[id] = PendingPushContext(
-        id: id, routePath: routePath, module: module, paramsJSON: paramsJSON, completion: completion)
+        id: id, routePath: routePath, module: module, paramsJSON: paramsJSON, title: reg.title, completion: completion)
     }
   }
 
@@ -569,6 +575,7 @@ public final class YYPRouter {
       // 关联 RouteEntry（业务 routePath 来自 ctx，UUID 跟 push 时分配的相同）
       let entry = RouteEntry(id: routeID, routePath: ctx.routePath, module: ctx.module, paramsJSON: ctx.paramsJSON, viewController: controller)
       controller.yyprouter_routeEntry = entry
+      controller.title = ctx.title
       activeRouteIDs.insert(routeID)
       debugPrint("[YYPRouter] ScreenDidMount → 关联 RouteEntry routePath=\(ctx.routePath) id=\(routeID)")
 

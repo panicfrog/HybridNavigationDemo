@@ -14,6 +14,14 @@ import java.util.concurrent.ConcurrentHashMap
 
 enum class YYPRouterPlatform { ANDROID_NATIVE, REACT_NATIVE }
 
+private const val TAG = "YYPRouter"
+
+/** 看门狗：动画时长 300ms，超过此窗口强制完成当前操作（防止 in-flight 卡死阻塞整个队列）。 */
+private const val IN_FLIGHT_WATCHDOG_MS = 2000L
+
+/** RN push 的 Fabric mount 超时：超过则认为挂载链路异常，清理 context 并告警。 */
+private const val PUSH_MOUNT_TIMEOUT_MS = 15_000L
+
 class Registration(
     val routePath: String,
     val module: String,
@@ -36,7 +44,6 @@ object YYPRouter {
     private val objectMapper = ObjectMapper()
     private val registrations = ConcurrentHashMap<String, Registration>()
     private val pendingPushContexts = ConcurrentHashMap<UUID, PendingPushContext>()
-    private val pendingCommands = ArrayDeque<() -> Unit>()
 
     private var container: YYPRouterNavigationContainer? = null
     private var hostActivity: FragmentActivity? = null
@@ -46,18 +53,43 @@ object YYPRouter {
     /** 已激活（在栈上）的 routeID，用于去重与 pop 同步。 */
     private val activeRouteIDs = mutableSetOf<String>()
 
-    /** push/pop 的 Promise resolve，等在栈上真正就绪/退场后再回调。 */
-    private var pendingPushCompletion: (() -> Unit)? = null
-    private var pendingPopCompletion: (() -> Unit)? = null
-    private var pendingPopTargetCount: Int = -1
     private var pendingRootView: View? = null
     private var pendingRootRouteID: String? = null
     private var pendingRootRoutePath: String? = null
 
     data class PendingPushContext(
         val id: UUID, val routePath: String, val module: String,
-        val paramsJSON: String?, val completion: (() -> Unit)?
+        val paramsJSON: String?, val title: String?, val completion: (() -> Unit)?
     )
+
+    /**
+     * 统一操作队列（对齐 iOS pendingQueue）：push/pop 一律入队串行执行，
+     * 当前一个转场完成（新 Fragment onResume / 旧 Fragment onDestroy）后链式执行下一项。
+     * 系统返回手势在 hasPendingOperations() 时直接拒绝（对齐 iOS shouldPop 拦截），
+     * JS/原生主动调用则排队等待，不丢失、completion 各自持有不互相覆盖。
+     */
+    private sealed class PendingOperation {
+        data class Push(
+            val view: View,
+            val routeID: String,
+            val routePath: String,
+            val headerTitle: String?,
+            val completion: (() -> Unit)?,
+        ) : PendingOperation()
+
+        data class Pop(val completion: (() -> Unit)?) : PendingOperation()
+    }
+
+    private val operationQueue = ArrayDeque<PendingOperation>()
+
+    /** 当前有一个 push/pop 转场在执行、尚未完成。 */
+    private var operationInFlight = false
+    private var inFlightCompletion: (() -> Unit)? = null
+
+    /** 看门狗代际：每次 resolve 递增，防止陈旧定时器提前打断后续正常转场。 */
+    private var inFlightGeneration = 0
+
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     // region - 宿主接入
 
@@ -85,11 +117,10 @@ object YYPRouter {
 
     @Synchronized
     private fun resetForNewHost() {
-        pendingCommands.clear()
+        operationQueue.clear()
+        operationInFlight = false
+        inFlightCompletion = null
         pendingPushContexts.clear()
-        pendingPushCompletion = null
-        pendingPopCompletion = null
-        pendingPopTargetCount = -1
         pendingRootView = null
         pendingRootRouteID = null
         pendingRootRoutePath = null
@@ -135,7 +166,7 @@ object YYPRouter {
     }
 
     /** 注册 RN 页面（由 JS 通过 YYPNavigationModule 调用）。与 iOS registerScreen(platform:.reactNative) 对应。 */
-    fun registerScreen(routePath: String, module: String, schemaJSON: String?) {
+    fun registerScreen(routePath: String, module: String, schemaJSON: String?, title: String? = null) {
         ensureListenerRegistered()
         val isRoot = routePath == YYPRouterConstants.ROOT_INDEX_PATH
         registrations[key(module, routePath)] = Registration(
@@ -145,6 +176,7 @@ object YYPRouter {
             schema = parseSchema(schemaJSON),
             createNativeView = null,
             isRoot = isRoot,
+            title = title,
         )
     }
 
@@ -163,11 +195,11 @@ object YYPRouter {
 
     // region - 路由栈
 
-    val currentStack: List<YYPRouterScreenFragment>
-        get() = container?.fragments.orEmpty()
+    // 注意：不要提供「完整栈」API —— replace+addToBackStack 下 fragmentManager.fragments
+    // 只包含当前 added 的栈顶 Fragment。栈深用 YYPRouterNavigationContainer.viewCount。
 
     fun hasPendingOperations(): Boolean =
-        pendingCommands.isNotEmpty() || pendingPushContexts.isNotEmpty()
+        operationInFlight || operationQueue.isNotEmpty() || pendingPushContexts.isNotEmpty()
 
     @Synchronized
     fun pushRoute(
@@ -192,21 +224,38 @@ object YYPRouter {
                     ?: throw IllegalStateException(
                         "No native view factory for $module/$routePath")
                 val id = UUID.randomUUID()
-                // 原生页面视图同步可用，Promise 等新 Fragment onResume（转场结束）再 resolve
-                pendingPushCompletion = completion
-                host.push(view, id.toString(), routePath, registration.title)
+                // 与 iOS 对齐：始终入队，前一个转场完成后链式执行
+                operationQueue.addLast(
+                    PendingOperation.Push(view, id.toString(), routePath, registration.title, completion))
+                flushOperations()
             }
 
             YYPRouterPlatform.REACT_NATIVE -> {
                 val id = UUID.randomUUID()
-                // completion 存在 context 里，等 Fabric mount → 入栈 → onResume 后统一 resolve
-                pendingPushContexts[id] = PendingPushContext(
+                // completion 存在 context 里，等 Fabric mount → 入栈 → 转场完成后统一 resolve
+                val pushId = id
+                pendingPushContexts[pushId] = PendingPushContext(
                     id = id,
                     routePath = routePath,
                     module = module,
                     paramsJSON = paramsJSON,
+                    title = registration.title,
                     completion = completion,
                 )
+                // 泄漏看门狗：Fabric mount 一直不来时（异常路径）告警并清理，Promise 不至于永久挂死
+                mainHandler.postDelayed({
+                    synchronized(this) {
+                        val leaked = pendingPushContexts.remove(pushId)
+                        if (leaked != null) {
+                            android.util.Log.e(
+                                TAG,
+                                "RN push mount timeout: ${routePath} id=$pushId 的 ScreenDidMount 未到达，" +
+                                    "已清理 context 并 resolve completion（页面未入栈）",
+                            )
+                            leaked.completion?.invoke()
+                        }
+                    }
+                }, PUSH_MOUNT_TIMEOUT_MS)
                 YYPNavEventBus.post(
                     YYPNavEvent(
                         YYPRouterConstants.EVENT_TYPE_PUSH_ROUTE,
@@ -226,19 +275,72 @@ object YYPRouter {
     @Synchronized
     fun popRoute(completion: (() -> Unit)? = null) {
         val host = container ?: throw IllegalStateException("Router container is not attached")
-        if (host.viewCount <= 1 || host.viewCount == 0) {
+        if (host.viewCount <= 1) {
             completion?.invoke()
             return
         }
-        pendingPopCompletion = completion
-        pendingPopTargetCount = host.viewCount - 1
-        host.pop()
+        // 与 iOS 对齐：始终入队（统一管理 push/pop 顺序）
+        operationQueue.addLast(PendingOperation.Pop(completion))
+        flushOperations()
+    }
+
+    /** 队列空闲则执行下一项；转场中（operationInFlight）则等待完成回调链式触发。 */
+    @Synchronized
+    private fun flushOperations() {
+        val host = container ?: return
+        if (operationInFlight) return
+        when (val op = operationQueue.firstOrNull() ?: return) {
+            is PendingOperation.Push -> {
+                operationQueue.removeFirst()
+                markOperationInFlight(op.completion)
+                host.push(op.view, op.routeID, op.routePath, op.headerTitle)
+            }
+
+            is PendingOperation.Pop -> {
+                if (host.viewCount <= 1) {
+                    // 已到栈底：立即完成并继续链（对齐 iOS 队列语义）
+                    operationQueue.removeFirst()
+                    op.completion?.invoke()
+                    flushOperations()
+                } else {
+                    operationQueue.removeFirst()
+                    markOperationInFlight(op.completion)
+                    host.pop()
+                }
+            }
+        }
+    }
+
+    private fun markOperationInFlight(completion: (() -> Unit)?) {
+        operationInFlight = true
+        inFlightCompletion = completion
+        // 看门狗：动画结束信号异常丢失时强制完成，避免队列永久阻塞
+        val generation = inFlightGeneration
+        mainHandler.postDelayed({
+            synchronized(this) {
+                if (operationInFlight && inFlightGeneration == generation) {
+                    resolveInFlightOperation()
+                }
+            }
+        }, IN_FLIGHT_WATCHDOG_MS)
+    }
+
+    /** 当前转场完成：resolve 并链式执行下一项。幂等，可被多个信号安全触发。 */
+    @Synchronized
+    private fun resolveInFlightOperation() {
+        if (!operationInFlight) return
+        operationInFlight = false
+        inFlightGeneration++ // 使所有在途看门狗失效
+        val completion = inFlightCompletion
+        inFlightCompletion = null
+        completion?.invoke()
+        flushOperations()
     }
 
     @Synchronized
     private fun handleStackChanged() {
         syncActiveRouteIDs()
-        flushPendingCommands()
+        flushOperations()
     }
 
     private fun syncActiveRouteIDs() {
@@ -247,40 +349,36 @@ object YYPRouter {
         activeRouteIDs.addAll(currentIDs)
     }
 
-    /** Fragment onDestroy（被 pop 掉）时调用：通知 JS 并同步路由状态。 */
+    /** Fragment onDestroy（被 pop 掉，退场动画已结束）时调用：通知 JS 并同步路由状态。 */
     @Synchronized
     fun onScreenFragmentDestroyed(fragment: YYPRouterScreenFragment) {
         if (fragment.routeID != null) {
             activeRouteIDs.remove(fragment.routeID)
         }
-        resolvePopIfNeeded()
+        // pop 的兜底完成信号（退场动画结束时 onDestroy 紧随其后）；
+        // push 进行中被替换页面不会 onDestroy（在 back stack 里），不会误触发
+        resolveInFlightOperation()
     }
 
-    /** Fragment 已 onResume（转场动画结束）时调用：push 的 Promise 在这里 resolve。 */
+    /**
+     * Fragment 入场动画结束（对齐 iOS transitionCoordinator 完成时机）时调用。
+     * push 看新页入场动画、pop 看露出页的 popEnter 动画，二者结束即当前转场完成。
+     *
+     * 只认当前栈顶 Fragment 的信号：被顶替的旧页面动画被取消时同样会回调 onAnimationEnd，
+     * 那种信号会把刚入栈的 push 提前误判为「转场完成」，导致返回拦截窗口失效。
+     */
+    @Synchronized
+    fun onScreenFragmentAnimationEnded(fragment: YYPRouterScreenFragment) {
+        if (container?.topFragment === fragment) {
+            resolveInFlightOperation()
+        }
+    }
+
+    /** Fragment 已 onResume：仅同步 routeID。转场完成以动画结束为准（见 onCreateAnimation）。 */
     @Synchronized
     fun onScreenFragmentAppeared(fragment: YYPRouterScreenFragment) {
         if (fragment.routeID != null) {
             activeRouteIDs.add(fragment.routeID!!)
-        }
-        // 只有栈顶 Fragment 的 onResume 才代表本次 push 的转场结束
-        if (container?.topFragment === fragment) {
-            resolvePushIfNeeded()
-        }
-    }
-
-    private fun resolvePushIfNeeded() {
-        val completion = pendingPushCompletion ?: return
-        pendingPushCompletion = null
-        completion()
-    }
-
-    private fun resolvePopIfNeeded() {
-        val completion = pendingPopCompletion ?: return
-        val currentCount = container?.viewCount ?: return
-        if (pendingPopTargetCount >= 0 && currentCount <= pendingPopTargetCount) {
-            pendingPopCompletion = null
-            pendingPopTargetCount = -1
-            completion()
         }
     }
 
@@ -329,7 +427,7 @@ object YYPRouter {
 
             YYPRouterConstants.EVENT_TYPE_FABRIC_TRANSACTION_DID_MOUNT -> {
                 fabricReady = true
-                flushPendingCommands()
+                flushOperations()
             }
         }
     }
@@ -369,22 +467,10 @@ object YYPRouter {
         val context = pendingPushContexts.remove(routeID) ?: return
         if (activeRouteIDs.contains(routeIDString)) return
 
-        // RN 页面：completion 从 pending context 转存到 push 完成队列
-        pendingPushCompletion = context.completion
-
-        pendingCommands.addLast {
-            container?.push(view, routeIDString, context.routePath)
-        }
-        flushPendingCommands()
-    }
-
-    @Synchronized
-    private fun flushPendingCommands() {
-        val host = container
-        if (host == null || !fabricReady) return
-        while (pendingCommands.isNotEmpty()) {
-            pendingCommands.removeFirst().invoke()
-        }
+        // RN 页面：入统一操作队列，等前一个转场完成后入栈
+        operationQueue.addLast(
+            PendingOperation.Push(view, routeIDString, context.routePath, context.title, context.completion))
+        flushOperations()
     }
 
     // endregion

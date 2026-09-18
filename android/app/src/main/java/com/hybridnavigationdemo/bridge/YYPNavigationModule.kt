@@ -54,8 +54,8 @@ class YYPNavigationModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun registerScreen(routePath: String, module: String, schemaJSON: String) {
-        YYPRouter.registerScreen(routePath, module, schemaJSON.ifBlank { null })
+    fun registerScreen(routePath: String, module: String, schemaJSON: String, title: String) {
+        YYPRouter.registerScreen(routePath, module, schemaJSON.ifBlank { null }, title.ifBlank { null })
     }
 
     @ReactMethod

@@ -47,13 +47,14 @@ public class YYPNavigationModule: RCTEventEmitter {
   }
     
   // MARK: JS -> 原生
-  @objc(registerScreen:module:schemaJSON:)
-  public func registerScreen(with routePath: String, module: String, schemaJson: String) {
+  @objc(registerScreen:module:schemaJSON:title:)
+  public func registerScreen(with routePath: String, module: String, schemaJson: String, title: String) {
     do {
       try YYPRouter.shared.registerScreen(routePath,
                                           module: module,
                                           platform: .reactNative,
-                                          schemaJSON: schemaJson.isEmpty ? nil : schemaJson)
+                                          schemaJSON: schemaJson.isEmpty ? nil : schemaJson,
+                                          title: title.isEmpty ? nil : title)
     } catch {
       debugPrint("[YYPNavigationModule] registerScreen \(routePath) failed: \(error)")
     }

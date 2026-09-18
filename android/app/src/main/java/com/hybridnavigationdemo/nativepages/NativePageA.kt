@@ -7,15 +7,9 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.util.Log
 import com.hybridnavigationdemo.router.YYPRouter
 
 class NativePageA(context: Context) : LinearLayout(context) {
-    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
-        val handled = super.dispatchTouchEvent(ev)
-        Log.d("TouchProbe", "NativePageA.dispatch action=${ev.action} handled=$handled")
-        return handled
-    }
 
     init {
         orientation = VERTICAL

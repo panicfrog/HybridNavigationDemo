@@ -12,7 +12,8 @@
 
 RCT_EXTERN__BLOCKING_SYNCHRONOUS_METHOD(registerScreen:(NSString *)routePath
                   module:(NSString *)module
-                  schemaJSON:(NSString *)schemaJSON)
+                  schemaJSON:(NSString *)schemaJSON
+                  title:(NSString *)title)
 
 RCT_EXTERN_METHOD(pushRoute:(NSString *)routePath
                   module:(NSString *)module

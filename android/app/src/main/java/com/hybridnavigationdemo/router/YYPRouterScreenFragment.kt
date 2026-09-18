@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.animation.Animation
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -41,6 +42,31 @@ class YYPRouterScreenFragment(
 
     val hybridScreen: HybridScreenView?
         get() = screenView as? HybridScreenView
+
+    /**
+     * 转场完成时机（对齐 iOS transitionCoordinator）：
+     * Fragment 的 onResume 在事务执行时就触发（动画开始前 ~20ms），不能作为转场结束信号，
+     * 否则 push 的 Promise 提前 resolve、转场动画期间的返回拦截窗口也过短。
+     * 这里在入场动画（push 的 slide_in_right / pop 时露出页的 slide_in_left）结束时通知 Router。
+     *
+     * 注意：Fragment.onCreateAnimation 默认返回 null —— 事务的 setCustomAnimations 由
+     * FragmentManager 内部加载播放，不经过此回调。要拿到动画结束时机，必须自己加载同一资源
+     * 并返回（返回非 null 时 FragmentManager 会改用它），挂上 listener。
+     */
+    override fun onCreateAnimation(transit: Int, enter: Boolean, animRes: Int): Animation? {
+        val fromSuper = super.onCreateAnimation(transit, enter, animRes)
+        if (!enter || animRes == 0) return fromSuper
+        val anim = fromSuper ?: android.view.animation.AnimationUtils.loadAnimation(context, animRes)
+        anim.setAnimationListener(object : Animation.AnimationListener {
+            override fun onAnimationStart(animation: Animation?) {}
+            override fun onAnimationRepeat(animation: Animation?) {}
+            override fun onAnimationEnd(animation: Animation?) {
+                Log.d(TAG, "enter animation end path=$routePath")
+                YYPRouter.onScreenFragmentAnimationEnded(this@YYPRouterScreenFragment)
+            }
+        })
+        return anim
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,

@@ -2,7 +2,6 @@ package com.hybridnavigationdemo.router
 
 import android.view.View
 import android.util.Log
-import android.view.MotionEvent
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.FragmentActivity
@@ -70,12 +69,6 @@ class YYPRouterNavigationContainer(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         registerBackStackListenerIfNeeded()
-    }
-
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        val handled = super.dispatchTouchEvent(ev)
-        Log.d("TouchProbe", "navContainer.dispatch action=${ev.action} handled=$handled")
-        return handled
     }
 
     override fun onDetachedFromWindow() {
