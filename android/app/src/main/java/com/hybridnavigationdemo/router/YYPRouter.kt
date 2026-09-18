@@ -20,7 +20,9 @@ class Registration(
     val platform: YYPRouterPlatform,
     val schema: JsonSchema?,
     val createNativeView: ((android.content.Context, String?) -> View)? = null,
-    val isRoot: Boolean = false
+    val isRoot: Boolean = false,
+    /** 导航栏标题（对齐 iOS 的 UIViewController.title）。RN 页面默认用 routePath。 */
+    val title: String? = null,
 )
 
 /**
@@ -66,13 +68,32 @@ object YYPRouter {
      */
     fun attachNavigationContainer(activity: FragmentActivity): YYPRouterNavigationContainer {
         ensureListenerRegistered()
-        hostActivity = activity
         val existing = container
-        if (existing != null) return existing
+        if (existing != null && hostActivity === activity) return existing
+        if (existing != null) {
+            // Activity 重建（finish 后再次启动 / 进程复用）：旧容器绑定的 FragmentManager
+            // 与父视图均已失效，直接复用会因「child already has a parent」崩溃。
+            // 重置路由栈状态后挂新容器；页面由新的注册流程（MainActivity / RN 重挂载）重建。
+            resetForNewHost()
+        }
+        hostActivity = activity
         val created = YYPRouterNavigationContainer(activity)
         created.onStackChanged = { handleStackChanged() }
         container = created
         return created
+    }
+
+    @Synchronized
+    private fun resetForNewHost() {
+        pendingCommands.clear()
+        pendingPushContexts.clear()
+        pendingPushCompletion = null
+        pendingPopCompletion = null
+        pendingPopTargetCount = -1
+        pendingRootView = null
+        pendingRootRouteID = null
+        pendingRootRoutePath = null
+        activeRouteIDs.clear()
     }
 
     val activeContainer: YYPRouterNavigationContainer? get() = container
@@ -93,6 +114,7 @@ object YYPRouter {
         module: String,
         createNativeView: (android.content.Context, String?) -> View,
         schemaJSON: String? = null,
+        title: String? = null,
     ) {
         ensureListenerRegistered()
         val isRoot = routePath == YYPRouterConstants.ROOT_INDEX_PATH
@@ -103,6 +125,7 @@ object YYPRouter {
             schema = parseSchema(schemaJSON),
             createNativeView = createNativeView,
             isRoot = isRoot,
+            title = title,
         )
         if (isRoot) {
             val context = hostActivity ?: container?.context ?: return
@@ -171,7 +194,7 @@ object YYPRouter {
                 val id = UUID.randomUUID()
                 // 原生页面视图同步可用，Promise 等新 Fragment onResume（转场结束）再 resolve
                 pendingPushCompletion = completion
-                host.push(view, id.toString(), routePath)
+                host.push(view, id.toString(), routePath, registration.title)
             }
 
             YYPRouterPlatform.REACT_NATIVE -> {

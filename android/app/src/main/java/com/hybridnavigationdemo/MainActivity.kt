@@ -170,11 +170,13 @@ class MainActivity : ReactActivity() {
       module = "default",
       createNativeView = { context, params -> NativePageC.create(context, params) },
       schemaJSON = NATIVE_C_SCHEMA,
+      title = "Native Screen C", // 与 iOS NativeViewControllerC.title 对齐
     )
     YYPRouter.registerNativeScreen(
       routePath = YYPRouterConstants.ROOT_INDEX_PATH,
       module = "default",
       createNativeView = { context, params -> NativePageA.create(context, params) },
+      title = "Native Screen A01", // 与 iOS NativeViewControllerA.title 对齐（Root 不显示导航栏）
     )
   }
 
