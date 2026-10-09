@@ -23,8 +23,8 @@ DerivedData
 **/.xcode.env.local
 
 # XcodeGen generated files
-ios/HybridNavigationDemo.xcodeproj/
-ios/HybridNavigationDemo.xcworkspace/
+example/ios/HybridNavigationDemo.xcodeproj/
+example/ios/HybridNavigationDemo.xcworkspace/
 
 # Android/IntelliJ
 #
