@@ -4,10 +4,10 @@
 
 #import <React/RCTConversions.h>
 #import <React/RCTSurfaceTouchHandler.h>
-#import <react/renderer/components/hybridnavigationdemo/ComponentDescriptors.h>
-#import <react/renderer/components/hybridnavigationdemo/EventEmitters.h>
-#import <react/renderer/components/hybridnavigationdemo/Props.h>
-#import <react/renderer/components/hybridnavigationdemo/RCTComponentViewHelpers.h>
+#import <react/renderer/components/hybridnavigation/ComponentDescriptors.h>
+#import <react/renderer/components/hybridnavigation/EventEmitters.h>
+#import <react/renderer/components/hybridnavigation/Props.h>
+#import <react/renderer/components/hybridnavigation/RCTComponentViewHelpers.h>
 
 namespace react = facebook::react;
 

@@ -3,6 +3,28 @@ PODS:
   - hermes-engine (250829098.0.10):
     - hermes-engine/Pre-built (= 250829098.0.10)
   - hermes-engine/Pre-built (250829098.0.10)
+  - HybridNavigation (0.1.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RCTDeprecation (0.85.0)
   - RCTRequired (0.85.0)
   - RCTSwiftUI (0.85.0)
@@ -1821,6 +1843,7 @@ PODS:
 DEPENDENCIES:
   - FBLazyVector (from `../../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - "HybridNavigation (from `../../node_modules/@yyp/hybrid-navigation`)"
   - RCTDeprecation (from `../../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../../node_modules/react-native/Libraries/Required`)
   - RCTSwiftUI (from `../../node_modules/react-native/ReactApple/RCTSwiftUI`)
@@ -1901,6 +1924,8 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-v250829098.0.10
+  HybridNavigation:
+    :path: "../../node_modules/@yyp/hybrid-navigation"
   RCTDeprecation:
     :path: "../../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation"
   RCTRequired:
@@ -2049,6 +2074,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   FBLazyVector: c00c20551d40126351a6783c47ce75f5b374851b
   hermes-engine: a734f37563e6d9fa21518c32760ffc691ddf1f8e
+  HybridNavigation: 85f53223db65f0f6323b9a0ed3822e076a19e475
   RCTDeprecation: 3bb167081b134461cfeb875ff7ae1945f8635257
   RCTRequired: 74839f55d5058a133a0bc4569b0afec750957f64
   RCTSwiftUI: 87a316382f3eab4dd13d2a0d0fd2adcce917361a
@@ -2117,11 +2143,11 @@ SPEC CHECKSUMS:
   React-utils: 5717eed2e4c96e4d8ad0718c2f63494c06c19e47
   React-webperformancenativemodule: c465a47195d1c6f3cd7eeb84f38389124b62ac73
   ReactAppDependencyProvider: 5787b37b8e2e51dfeab697ec031cc7c4080dcea2
-  ReactCodegen: fe91d245a0c4c37d9cdfe7ec5858343ea6a28182
+  ReactCodegen: 2f0ae2f4bdb77897a207e3f8f26f767d94b2eecd
   ReactCommon: fe2a3af8975e63efa60f95fca8c34dc85deee360
   ReactNativeDependencies: d7129323b1e23969c7e0ff1f9bb4a5d30006965c
   Yoga: e83c3121d079541e69f3c5c623faaaf933fb5812
 
-PODFILE CHECKSUM: 4a5422d3fe4ce62c1a65062d501e44533c4e6c78
+PODFILE CHECKSUM: f51e4bd1435a10826c30f9b35adbe7437164909d
 
 COCOAPODS: 1.16.2

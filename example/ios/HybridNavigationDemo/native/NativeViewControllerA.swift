@@ -1,4 +1,5 @@
 import UIKit
+import HybridNavigation
 import JSONSchema
 import JSONSchemaBuilder
 

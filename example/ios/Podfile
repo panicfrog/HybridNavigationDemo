@@ -5,7 +5,11 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+# swift-json-schema（HybridNavigation 的 SPM 依赖）经 cocoapods-spm 插件集成
+plugin 'cocoapods-spm'
+
+# HybridNavigation（swift-json-schema 宏）要求 iOS 17+，app 的 XcodeGen deploymentTarget 也是 17.0
+platform :ios, '17.0'
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
@@ -16,6 +20,11 @@ end
 
 target 'HybridNavigationDemo' do
   config = use_native_modules!
+
+  spm_pkg 'swift-json-schema',
+          :git => 'https://github.com/ajevans99/swift-json-schema',
+          :branch => 'main',
+          :products => ['JSONSchema', 'JSONSchemaBuilder', 'JSONSchemaConversion', 'OrderedJSON']
 
   use_react_native!(
     :path => config[:reactNativePath],
