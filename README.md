@@ -1,6 +1,22 @@
 # HybridNavigationDemo
 
-React Native **混合导航** Demo：RN 页面与原生页面（iOS UIViewController / Android View+Fragment）共用**同一个原生路由栈**，由各端原生侧的 YYPRouter 统一承载 push/pop、参数校验与转场时序。
+React Native **混合导航** monorepo：RN 页面与原生页面（iOS UIViewController / Android View+Fragment）共用**同一个原生路由栈**，由各端原生侧的 YYPRouter 统一承载 push/pop、参数校验与转场时序。
+
+## 仓库结构（SDK 化）
+
+```
+HybridNavigationDemo/
+├── packages/hybrid-navigation/    # SDK：@yyp/hybrid-navigation（一个 npm 包携带三端）
+│   ├── package.json               # codegenConfig（name: hybridnavigation）+ peerDeps
+│   ├── src/                       # JS SDK（HybridNavigationRoot/Container/Screen/注册/导航）
+│   ├── ios/                       # iOS SDK（YYPRouter、Fabric 组件、YYPNavigationModule）
+│   │   └── ../HybridNavigation.podspec（CocoaPods 库，swift-json-schema 经 cocoapods-spm 集成）
+│   ├── android/                   # Android SDK（com.hybridnavigation：router/bridge/fabric library module）
+│   └── react-native.config.js     # autolinking 元数据
+└── example/                       # 示例 app（RN 0.85 新架构），workspace 依赖 SDK 包验证全链路
+```
+
+SDK 的安装与使用文档见 [`packages/hybrid-navigation/README.md`](packages/hybrid-navigation/README.md)。
 
 核心思路：**路由栈在原生，页面渲染按需混合**。
 
@@ -40,29 +56,24 @@ React Native **混合导航** Demo：RN 页面与原生页面（iOS UIViewContro
 
 pop 同理入队；系统返回（iOS 侧滑/back button、Android 返回手势）在 `hasPendingOperations()` 时被拦截，避免与在途操作竞争。
 
-## 目录结构（SDK 层 vs Demo 层）
+## 目录结构（SDK vs example）
 
-**每端一个 SDK 层**（可整体搬走的混合导航核心，目前住在 app target 内，尚未抽成独立 Pod / Gradle module）：
-
-| 端 | SDK 代码 | 职责 |
+| 端 | 位置 | 职责 |
 |---|---|---|
-| iOS | `ios/HybridNavigationDemo/hybrid/` | `YYPRouter.swift`（路由中枢）、`YYPRouterNavigationController.swift`（栈宿主 + 返回拦截）、`YYPNavigationModule.swift`（JS 桥）、`HybridScreenComponentView.mm` / `HybridContainerView.mm`（Fabric 组件）、`YYPRouterConstants`（双端共用常量） |
-| Android | `android/app/src/main/java/com/hybridnavigationdemo/{router,bridge,fabric}/` | `router/YYPRouter.kt`（路由中枢）、`router/YYPRouterNavigationContainer.kt` + `YYPRouterScreenFragment.kt`（Fragment 栈宿主）、`router/YYPNavEventBus.kt`（事件总线）、`bridge/YYPNavigationModule.kt`（JS 桥）、`fabric/`（Fabric 组件） |
-| JS | `src/`（HybridNavigationRoot / HybridContainer / HybridScreen / HybridNavigation.ts / screens.ts） | 注册、动态挂载、Promise 化的 push/pop |
-
-**Demo 层**（使用 SDK 的示例业务代码）：
-
-- iOS：`AppDelegate.swift`（接入 + 注册页面）、`native/NativeViewControllerA|C.swift`
-- Android：`MainActivity.kt`（接入 + 注册页面）、`nativepages/NativePageA|C.kt`
-- JS：`ScreenB.tsx` / `ScreenD.tsx` / `ScreenRoot.tsx`
+| iOS SDK | `packages/hybrid-navigation/ios/HybridNavigation/` | `YYPRouter.swift`（路由中枢）、`YYPRouterNavigationController.swift`（栈宿主 + 返回拦截）、`YYPNavigationModule.swift`（JS 桥）、`HybridScreenComponentView.mm` / `HybridContainerView.mm`（Fabric 组件）、`YYPRouterConstants`（双端共用常量） |
+| Android SDK | `packages/hybrid-navigation/android/src/main/java/com/hybridnavigation/{router,bridge,fabric}/` | `router/YYPRouter.kt`（路由中枢）、`router/YYPRouterNavigationContainer.kt` + `YYPRouterScreenFragment.kt`（Fragment 栈宿主）、`router/YYPNavEventBus.kt`（事件总线）、`bridge/YYPNavigationModule.kt`（JS 桥）、`fabric/`（Fabric 组件） |
+| JS SDK | `packages/hybrid-navigation/src/` | 注册、动态挂载、Promise 化的 push/pop |
+| example | `example/` | iOS：`AppDelegate.swift`（接入 + 注册页面）、`native/NativeViewControllerA|C.swift`；Android：`MainActivity.kt`、`nativepages/NativePageA|C.kt`；JS：`App.tsx`、`screens.ts`、`ScreenB/D/Root.tsx` |
 
 ## 使用方式
 
 ### JS 侧注册 / 导航
 
 ```ts
-// src/screens.ts —— 新增 RN 页面在这里加一行
-export const screens: Record<string, ScreenDefinition> = {
+// example/src/screens.ts —— 新增 RN 页面在这里加一行
+import { type ScreenRegistry } from '@yyp/hybrid-navigation';
+
+export const screens: ScreenRegistry = {
   B: {
     screen: ScreenB,
     schema: z.object({ title: z.string().optional() }), // zod → JSON Schema 发给原生校验
@@ -71,15 +82,16 @@ export const screens: Record<string, ScreenDefinition> = {
 };
 
 // 导航（转场动画完成后 resolve）
-import { pushRoute, pop } from './HybridNavigation';
+import { pushRoute, pop } from '@yyp/hybrid-navigation';
 await pushRoute('B', { title: 'hello' });
 await pop();
 ```
 
-### 原生侧注册（iOS）
+### 原生侧注册（iOS，AppDelegate）
 
 ```swift
-// AppDelegate
+import HybridNavigation
+
 YYPRouter.shared.attachWindow(window, rootView: rootView)   // Root 页换 window.rootViewController 用
 try! YYPRouter.shared.registerScreen("C", module: "default",
     providerClass: NativeViewControllerC.self)              // 原生页：Params 用 @Schemable 生成 schema
@@ -87,10 +99,11 @@ try! YYPRouter.shared.registerScreen(YYPRouterRootIndexPath,
     module: "default", providerClass: NativeViewControllerA.self)  // Root 页：立即接管 window
 ```
 
-### 原生侧注册（Android）
+### 原生侧注册（Android，MainActivity.onCreate）
 
 ```kotlin
-// MainActivity.onCreate
+import com.hybridnavigation.router.YYPRouter
+
 val navigationContainer = YYPRouter.attachNavigationContainer(this)
 YYPRouter.registerNativeScreen(
     routePath = "C", module = "default",
@@ -102,7 +115,7 @@ YYPRouter.registerNativeScreen(
 
 ### Root 页机制（`__index__`）
 
-`routePath == "__index__"` 的注册项被识别为该 module 的 Root（每 module 至多一个）。启动期主动 mount 后原生接管根视图：iOS 换 `window.rootViewController`，Android 置为 Fragment 栈底。Root 不允许被 `pushRoute`。Demo 默认走**原生 Root**（A 页）；要验证 RN Root，取消 `screens.ts` 中 `[INDEX_PATH]` 的注释并去掉 AppDelegate / MainActivity 的 `__index__` 注册。
+`routePath == "__index__"` 的注册项被识别为该 module 的 Root（每 module 至多一个）。启动期主动 mount 后原生接管根视图：iOS 换 `window.rootViewController`，Android 置为 Fragment 栈底。Root 不允许被 `pushRoute`。Demo 默认走**原生 Root**（A 页）；要验证 RN Root，取消 `example/src/screens.ts` 中 `[INDEX_PATH]` 的注释并去掉 AppDelegate / MainActivity 的 `__index__` 注册。
 
 ## 关键机制速查
 
@@ -113,19 +126,21 @@ YYPRouter.registerNativeScreen(
 - **触摸分发**：RN overlay 整体不参与触摸（iOS `isUserInteractionEnabled = false`；Android `dispatchTouchEvent` 恒 false 的包裹容器），页面内触摸由各自页面自己处理。
 - **看门狗**（Android）：转场 2s 强制完成、RN mount 15s 超时清理，防止异常路径卡死队列。
 
-## 运行
+## 运行（example）
 
 ```sh
-npm start                 # Metro
-npm run android
-npm run ios               # iOS 用 XcodeGen（xcodegen generate）+ bundle exec pod install
+npm install               # 仓库根（npm workspaces）
+npm start                 # Metro（example）
+npm run android           # 需 JDK 21（见 example/android/gradle.properties）
+npm run ios               # 首次：cd example/ios && xcodegen generate && pod install（含 cocoapods-spm 插件）
 ```
 
 构建环境注意：Node 22、npm 镜像顺序、Fabric 宏校验等详见项目内备忘。
 
 ## Roadmap / 已知边界
 
-- [ ] **SDK 独立化**：iOS 抽成 Pod、Android 抽成 Gradle library module、JS 侧抽成 npm 包（当前代码已按 SDK 边界组织，但仍在 app target 内）
+- [x] **SDK 独立化**：JS npm 包 + iOS Pod + Android library module（均随 `@yyp/hybrid-navigation` 分发，autolinking 收录）
+- [ ] iOS SPM 分发（RN 0.87 的第三方库 SPM 支持落地后，加 `react-native.config.js` 的 `spm.source` 即可，无需改结构）
 - [ ] 多 module / 多 container 场景（当前 demo 单 container）
 - [ ] present/dismiss 模态路由
 - [ ] Android 原生页 schema 自动生成（对齐 iOS `@Schemable`）

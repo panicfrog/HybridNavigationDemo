@@ -1,0 +1,3 @@
+# 构建产物不进发布物（android/build 是本地 gradle codegen 输出）
+android/build
+android/.cxx
