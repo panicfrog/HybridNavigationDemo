@@ -1,6 +1,7 @@
 import React from 'react';
-import HybridNavigationRoot from './src/HybridNavigationRoot';
+import { HybridNavigationRoot } from '@yyp/hybrid-navigation';
+import { screens } from './src/screens';
 
 export default function App() {
-  return <HybridNavigationRoot />;
+  return <HybridNavigationRoot screens={screens} />;
 }

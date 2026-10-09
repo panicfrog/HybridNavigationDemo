@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import HybridContainer from './HybridContainer';
 import HybridScreen from './HybridScreen';
-import { hybridNavigationEmitter, registerScreen } from './HybridNavigation';
-import { screens, INDEX_PATH } from './screens';
+import { hybridNavigationEmitter } from './HybridNavigation';
+import { registerScreens } from './registerScreens';
+import { INDEX_PATH, type ScreenRegistry } from './types';
 
 type ActiveScreen = {
   routeID: string;
@@ -11,25 +12,32 @@ type ActiveScreen = {
   params?: any;
 };
 
+export interface HybridNavigationRootProps {
+  /// routePath → RN 页面定义（业务方提供）。Root 页（__index__）也在这里声明。
+  screens: ScreenRegistry;
+  /// 路由 module，与原生注册侧一致（默认 "default"）。
+  module?: string;
+}
+
 // 混合导航根容器：
-// 1. 启动时按 screens map 注册所有 RN 页面到 YYPRouter（仅注册，不渲染）
+// 1. 启动时把 screens 注册到 YYPRouter（仅注册，不渲染）
 // 2. 监听 YYPRouter 的 pushRoute 事件，按 routeID 加入 Map（动态渲染，按需挂载）
 // 3. 监听 HybridScreen 的 onNativeDismiss，按 routeID 精确移除
 // 4. 同 routePath push 两次时，routeID 区分两个实例（React key = routeID）
-export default function HybridNavigationRoot() {
+export default function HybridNavigationRoot({ screens, module = 'default' }: HybridNavigationRootProps) {
   const [activeScreens, setActiveScreens] = useState<Map<string, ActiveScreen>>(new Map());
 
   useEffect(() => {
-    Object.entries(screens).forEach(([key, def]) => registerScreen(key, def));
+    registerScreens(screens, module);
 
-    // 启动期主动 mount Root 页(routeID = module 名 "default")。
+    // 启动期主动 mount Root 页(routeID = module 名)。
     // registerScreen 已同步完成,原生端 rootModules 就绪。
     // setActiveScreens 触发 re-render → Fabric mount → onEvent ScreenDidMount routePath=__index__ →
-    // 原生换 window.rootViewController 为新 nav(rootVC = ScreenRoot)。
+    // 原生换 window.rootViewController 为新 nav(rootVC = Root 页)。
     if (screens[INDEX_PATH]) {
       setActiveScreens(prev => {
         const next = new Map(prev);
-        next.set('default', { routeID: 'default', routePath: INDEX_PATH });
+        next.set(module, { routeID: module, routePath: INDEX_PATH });
         return next;
       });
     }
@@ -57,6 +65,8 @@ export default function HybridNavigationRoot() {
       },
     );
     return () => sub.remove();
+    // screens/module 由业务方在模块顶层定义为常量传入（保证引用稳定，避免重复注册）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleNativeDismiss = (routeID: string) => {

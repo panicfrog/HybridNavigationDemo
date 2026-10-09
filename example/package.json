@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.85.0",
+    "@yyp/hybrid-navigation": "*",
     "react": "19.2.3",
     "react-native": "0.85.0",
     "react-native-safe-area-context": "^5.5.2",
@@ -44,30 +45,5 @@
   },
   "engines": {
     "node": ">= 22.11.0"
-  },
-  "codegenConfig": {
-    "name": "hybridnavigationdemo",
-    "type": "components",
-    "jsSrcsDir": "./src/fabric",
-    "android": {
-      "components": {
-        "HybridContainer": {
-          "className": "com.hybridnavigationdemo.fabric.HybridContainerView"
-        },
-        "HybridScreen": {
-          "className": "com.hybridnavigationdemo.fabric.HybridScreenView"
-        }
-      }
-    },
-    "ios": {
-      "components": {
-        "HybridContainer": {
-          "className": "HybridContainerView"
-        },
-        "HybridScreen": {
-          "className": "HybridScreenComponentView"
-        }
-      }
-    }
   }
 }

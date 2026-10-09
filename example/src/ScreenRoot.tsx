@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { pushRoute } from './HybridNavigation';
+import { pushRoute } from '@yyp/hybrid-navigation';
 
 // 验证用 Root RN 页:作为新 nav 的 rootViewController,通过启动期主动 mount 进来。
 // 这里只验证 push B 落到新 nav 栈顶(active=default 的 Root nav)。

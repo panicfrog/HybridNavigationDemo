@@ -1,0 +1,53 @@
+{
+  "name": "@yyp/hybrid-navigation",
+  "version": "0.1.0",
+  "description": "React Native 混合导航：RN 与原生页面共用原生路由栈（iOS YYPRouter / Android YYPRouter）",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "src",
+    "ios",
+    "android",
+    "README.md",
+    "*.podspec"
+  ],
+  "codegenConfig": {
+    "name": "hybridnavigation",
+    "type": "components",
+    "jsSrcsDir": "./src/fabric",
+    "android": {
+      "components": {
+        "HybridContainer": {
+          "className": "com.hybridnavigation.fabric.HybridContainerView"
+        },
+        "HybridScreen": {
+          "className": "com.hybridnavigation.fabric.HybridScreenView"
+        }
+      }
+    },
+    "ios": {
+      "components": {
+        "HybridContainer": {
+          "className": "HybridContainerView"
+        },
+        "HybridScreen": {
+          "className": "HybridScreenComponentView"
+        }
+      }
+    }
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "zod": "^3",
+    "zod-to-json-schema": "^3"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "engines": {
+    "node": ">= 22.11.0"
+  }
+}

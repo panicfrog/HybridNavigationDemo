@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { pushRoute } from './HybridNavigation';
+import { pushRoute } from '@yyp/hybrid-navigation';
 
 interface ScreenBProps {
   params?: { title?: string };
