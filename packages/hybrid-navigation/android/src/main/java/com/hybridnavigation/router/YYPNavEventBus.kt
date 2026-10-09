@@ -1,4 +1,4 @@
-package com.hybridnavigationdemo.router
+package com.hybridnavigation.router
 
 import android.os.Handler
 import android.os.Looper

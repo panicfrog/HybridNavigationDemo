@@ -1,4 +1,4 @@
-package com.hybridnavigationdemo.router
+package com.hybridnavigation.router
 
 object YYPRouterConstants {
     const val ROOT_INDEX_PATH = "__index__"

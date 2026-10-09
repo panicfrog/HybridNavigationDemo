@@ -1,4 +1,4 @@
-package com.hybridnavigationdemo.router
+package com.hybridnavigation.router
 
 import android.view.View
 import android.util.Log
@@ -6,7 +6,7 @@ import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
-import com.hybridnavigationdemo.R
+import com.hybridnavigation.R
 
 /**
  * 对应 iOS 的 YYPRouterNavigationController：用 FragmentManager 承载路由栈。

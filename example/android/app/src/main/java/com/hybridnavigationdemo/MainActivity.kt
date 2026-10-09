@@ -11,8 +11,8 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnable
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 import com.hybridnavigationdemo.nativepages.NativePageA
 import com.hybridnavigationdemo.nativepages.NativePageC
-import com.hybridnavigationdemo.router.YYPRouter
-import com.hybridnavigationdemo.router.YYPRouterConstants
+import com.hybridnavigation.router.YYPRouter
+import com.hybridnavigation.router.YYPRouterConstants
 
 class MainActivity : ReactActivity() {
 

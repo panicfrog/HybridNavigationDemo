@@ -1,4 +1,4 @@
-package com.hybridnavigationdemo.fabric
+package com.hybridnavigation.fabric
 
 import android.view.View
 import com.facebook.react.bridge.ReactContext

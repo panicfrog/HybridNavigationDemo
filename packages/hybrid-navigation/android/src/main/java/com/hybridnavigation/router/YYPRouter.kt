@@ -1,11 +1,11 @@
-package com.hybridnavigationdemo.router
+package com.hybridnavigation.router
 
 import android.app.Activity
 import android.view.View
 import android.widget.FrameLayout
 import androidx.fragment.app.FragmentActivity
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.hybridnavigationdemo.fabric.HybridScreenView
+import com.hybridnavigation.fabric.HybridScreenView
 import com.networknt.schema.JsonSchema
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion

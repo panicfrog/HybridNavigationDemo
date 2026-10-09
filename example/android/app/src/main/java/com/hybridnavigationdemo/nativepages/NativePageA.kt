@@ -7,7 +7,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.hybridnavigationdemo.router.YYPRouter
+import com.hybridnavigation.router.YYPRouter
 
 class NativePageA(context: Context) : LinearLayout(context) {
 

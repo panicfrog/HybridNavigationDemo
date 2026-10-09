@@ -1,14 +1,14 @@
-package com.hybridnavigationdemo.bridge
+package com.hybridnavigation.bridge
 
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEmitter
-import com.hybridnavigationdemo.router.YYPNavEvent
-import com.hybridnavigationdemo.router.YYPNavEventBus
-import com.hybridnavigationdemo.router.YYPRouter
-import com.hybridnavigationdemo.router.YYPRouterConstants
+import com.hybridnavigation.router.YYPNavEvent
+import com.hybridnavigation.router.YYPNavEventBus
+import com.hybridnavigation.router.YYPRouter
+import com.hybridnavigation.router.YYPRouterConstants
 
 class YYPNavigationModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {

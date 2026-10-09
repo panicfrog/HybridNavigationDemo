@@ -2,30 +2,10 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
-// AGP's GeneratePrefabPackagesKt.reportErrors incorrectly treats JVM warnings
-// (e.g. "WARNING: A restricted method...") in CMake output as fatal errors.
-// This is a known AGP bug with JDK 17+. Wrap task actions to suppress false positives.
-tasks.whenTaskAdded { task ->
-    if (task.name.startsWith("configureCMake")) {
-        def originalActions = new ArrayList(task.actions)
-        task.actions.clear()
-        task.doLast {
-            try {
-                originalActions.each { action ->
-                    action.execute(task)
-                }
-            } catch (Exception e) {
-                if (e.message?.contains("restricted method") ||
-                    e.message?.contains("Picked up JDK_JAVA_OPTIONS") ||
-                    e.message?.contains("Picked up JAVA_TOOL_OPTIONS")) {
-                    println "[HybridNav] Suppressed AGP false positive: ${e.message}"
-                } else {
-                    throw e
-                }
-            }
-        }
-    }
-}
+// 注意：不要加「包装 configureCMake 吞 JVM 警告」之类的补丁 ——
+// "WARNING: A restricted method in java.lang.System has been called" 来自 JDK 24+，
+// AGP 会把它当致命错误；正确解法是用 JDK 21（见 gradle.properties 的 org.gradle.java.home），
+// 补丁只会掩盖真正的 configure 失败（mini.json 不生成）。
 
 /**
  * This is the configuration block to customize your React Native Android app.

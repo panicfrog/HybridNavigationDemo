@@ -1,0 +1,44 @@
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+def safeExtGet(prop, fallback) {
+  return rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}
+
+android {
+  namespace "com.hybridnavigation"
+  compileSdk safeExtGet("compileSdkVersion", 36)
+
+  defaultConfig {
+    minSdk safeExtGet("minSdkVersion", 24)
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  lint {
+    abortOnError false
+  }
+}
+
+repositories {
+  google()
+  mavenCentral()
+}
+
+dependencies {
+  // React Native（版本由 app 侧的 dependency substitution 提供）
+  implementation "com.facebook.react:react-android"
+  // JSON Schema 参数校验（对齐 iOS swift-json-schema）
+  implementation "com.networknt:json-schema-validator:1.5.2"
+  // 路由栈用 Fragment 承载
+  implementation "androidx.fragment:fragment:${safeExtGet("fragmentVersion", "1.8.6")}"
+  implementation "androidx.activity:activity:${safeExtGet("activityVersion", "1.10.1")}"
+}
+
+// 库模式：仅声明 codegen，不做 autolinking（那是 app 的事）
+react {
+}

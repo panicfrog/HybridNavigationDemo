@@ -1,11 +1,11 @@
-package com.hybridnavigationdemo.fabric
+package com.hybridnavigation.fabric
 
 import android.view.View
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.views.view.ReactViewGroup
-import com.hybridnavigationdemo.router.YYPNavEvent
-import com.hybridnavigationdemo.router.YYPNavEventBus
-import com.hybridnavigationdemo.router.YYPRouterConstants
+import com.hybridnavigation.router.YYPNavEvent
+import com.hybridnavigation.router.YYPNavEventBus
+import com.hybridnavigation.router.YYPRouterConstants
 
 /**
  * 透明容器，对应 iOS HybridContainerView：只负责观察 Fabric 子视图的挂载并广播事件，

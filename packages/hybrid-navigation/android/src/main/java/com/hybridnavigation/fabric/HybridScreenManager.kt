@@ -1,4 +1,4 @@
-package com.hybridnavigationdemo.fabric
+package com.hybridnavigation.fabric
 
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewGroupManager

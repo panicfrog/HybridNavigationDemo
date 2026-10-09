@@ -1,4 +1,4 @@
-package com.hybridnavigationdemo.router
+package com.hybridnavigation.router
 
 import android.content.Context
 import android.graphics.Color
@@ -13,7 +13,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.hybridnavigationdemo.fabric.HybridScreenView
+import com.hybridnavigation.fabric.HybridScreenView
 
 private const val TAG = "YYPNavFragment"
 

@@ -1,4 +1,4 @@
-package com.hybridnavigationdemo.fabric
+package com.hybridnavigation.fabric
 
 import android.annotation.SuppressLint
 import android.util.Log
@@ -13,7 +13,7 @@ import com.facebook.react.uimanager.RootView
 import com.facebook.react.uimanager.common.UIManagerType
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.views.view.ReactViewGroup
-import com.hybridnavigationdemo.router.YYPRouterConstants
+import com.hybridnavigation.router.YYPRouterConstants
 
 /**
  * RN 页面在 Android 侧的落点，对应 iOS 的 HybridScreenComponentView。
